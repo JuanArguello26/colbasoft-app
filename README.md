@@ -2,7 +2,7 @@
 
 Plataforma de trazabilidad de inventarios para PYMES textiles (proyecto de grado). Este repositorio contiene **el código**; los documentos (SPEC, SRS, dominio, arquitectura) están en el repositorio `colbasoft-docs`.
 
-> **Estado:** esqueleto del corte de entrega **C1** (SPEC v1.5 §12.7). Bloque C1-1 (Fundación) iniciado: inicio de sesión, base de datos, catálogo y carga de datos ficticios.
+> **Estado:** corte de entrega **C1** (SPEC v1.5 §12.7). **Bloque C1-1 (Fundación) completo**; siguen C1-2 (QR y lotes) y los demás.
 > **Datos:** el proyecto se valida **solo con datos ficticios** (SPEC §12.8). El Excel es **únicamente una carga de datos de prueba**; la base de datos es PostgreSQL.
 
 ## Pila (ADR-001)
@@ -46,9 +46,29 @@ npm run typecheck # los tres paquetes
 
 Kardex inmutable, existencia derivada de los movimientos, no-negativo sin excepción, SKU y ubicación únicos, piezas con cantidad propia (DOMAIN_MODEL IN-01…IN-79). Se aplican **en la base de datos** y en la transacción que escribe el movimiento, no solo en el código (ADR-001 §3).
 
-## Lo que este esqueleto todavía NO tiene
+## Estado del bloque C1-1 (Fundación)
 
-- Bloqueo de cuenta tras cinco intentos fallidos y cambio de contraseña (HU-ACC-001/003).
-- Bitácora de auditoría (HU-AUD-001) y gestión de usuarios y roles (M-02).
-- Crear o editar referencias; estructura de bodega editable; QR; entradas, kardex, movimientos y salidas (bloques C1-2 a C1-6).
-- Retención local y sincronización sin conectividad (fuera del corte C1).
+| Historia | Qué hay |
+|---|---|
+| HU-ACC-001/002 | Inicio de sesión con bloqueo tras intentos fallidos, sesión con cierre por inactividad (aviso previo, tiempo en Parámetros) |
+| HU-USR-001/002 | Crear usuarios (cinco roles, clave temporal de un solo uso, cambio obligatorio en el primer acceso); desactivar y reactivar; nunca eliminar |
+| HU-CAT-001/002 | Crear y editar referencias, tallas, colores y categorías; SKU generados automáticamente; código único |
+| HU-BOD-001/002 | Bodegas, zonas y ubicaciones; zona de recepción obligatoria; capacidad opcional con lista de pendientes |
+| HU-PAR-001/002 | Parámetros con rango admisible y registro del valor anterior y nuevo; motivos tipificados por tipo de operación |
+| HU-AUD-001 | Bitácora inmutable (la base de datos rechaza UPDATE, DELETE y TRUNCATE), encadenada por huella; filtros, exportación CSV y verificación de continuidad |
+
+Las pantallas se ven según el rol (SPEC §2.7): el Jefe consulta parámetros y bitácora (sin eventos de configuración), el Coordinador solo su umbral, el Auditor solo la bitácora.
+
+## Provisional o pendiente
+
+- **Parámetros y rangos:** son valores **de demostración**; el SPEC no fija cifras (se calibran con datos reales).
+- **Política de contraseñas:** provisional (8 caracteres, letras y números, sin el usuario); el SPEC no la define.
+- **Notificación al Administrador** por cuenta bloqueada (RF-ACC-004): queda el evento en la bitácora y la marca «Bloqueado» en Usuarios; la notificación llega con el módulo M-20. El desbloqueo (HU-ACC-004) se anticipó por necesidad.
+- **Identificador QR de ubicaciones** (HU-BOD-001, criterio 5): llega con el bloque C1-2.
+- **Reglas que dependen del kardex** (RN-004, RN-013, RN-MAE-003): el código ya las valida, pero hoy no hay movimientos ni existencia; tres pruebas están marcadas como pendientes y se activan en el bloque C1-3.
+- **Conservar el registro en curso al expirar la sesión** (HU-ACC-002, criterio 4): se comprueba cuando existan formularios de registro (C1-3).
+- Retención local y sincronización sin conectividad: fuera del corte C1.
+
+## Base de datos de pruebas
+
+`npm test` usa la base `colbasoft_test` (se crea sola y solo se le aplican migraciones; las pruebas crean datos con nombres únicos). Para empezar de cero, en su terminal: `npm run db:test:reset` (destructivo, solo toca la base de pruebas).
