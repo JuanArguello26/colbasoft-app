@@ -6,6 +6,7 @@ export const HOJAS = {
   bodegas: ["codigo", "nombre"],
   zonas: ["bodega", "codigo", "nombre", "tipo"],
   ubicaciones: ["bodega", "zona", "codigo"],
+  motivos: ["tipo_operacion", "nombre", "exige_evidencia"],
 } as const;
 
 export type NombreHoja = keyof typeof HOJAS;

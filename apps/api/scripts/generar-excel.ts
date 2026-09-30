@@ -84,6 +84,22 @@ for (const [codigo, nombre, tipo, n] of ZONAS) {
   for (let i = 1; i <= n; i++) ubicaciones.addRow(["B1", codigo, `${codigo}-${String(i).padStart(2, "0")}`]);
 }
 
+const motivos = hoja("motivos");
+for (const [tipo, nombre, evidencia] of [
+  ["AJUSTE", "Diferencia detectada en conteo", "NO"],
+  ["AJUSTE", "Error de registro corregido", "NO"],
+  ["AJUSTE", "Mercancía dañada", "SI"],
+  ["AJUSTE", "Mercancía perdida", "SI"],
+  ["ANULACION", "Movimiento registrado por error", "NO"],
+  ["ANULACION", "Cantidad mal digitada", "NO"],
+  ["SALIDA", "Consumo en producción", "NO"],
+  ["SALIDA", "Despacho", "NO"],
+  ["SALIDA", "Devolución al origen", "NO"],
+  ["SALIDA", "Baja por daño", "SI"],
+  ["DESCARTE_ALERTA", "Alerta atendida", "NO"],
+  ["DESCARTE_ALERTA", "Falsa alarma", "NO"],
+] as const) motivos.addRow([tipo, nombre, evidencia]);
+
 const salida = resolve(process.argv[2] ?? "../../data/datos_ficticios.xlsx");
 mkdirSync(dirname(salida), { recursive: true });
 await libro.xlsx.writeFile(salida);

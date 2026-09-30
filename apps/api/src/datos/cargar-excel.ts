@@ -1,5 +1,5 @@
 import ExcelJS from "exceljs";
-import { ROLES, UNIDADES_MEDIDA, type Rol, type UnidadMedida } from "@colbasoft/shared";
+import { ROLES, TIPOS_OPERACION, UNIDADES_MEDIDA, type Rol, type TipoOperacion, type UnidadMedida } from "@colbasoft/shared";
 import { prisma } from "../db.js";
 import { hashClave } from "../seguridad.js";
 import { HOJAS, type NombreHoja } from "./excel.js";
@@ -27,6 +27,7 @@ export interface Resumen {
   skus: number;
   zonas: number;
   ubicaciones: number;
+  motivos: number;
 }
 
 /** Carga (o vuelve a cargar) los datos ficticios. Es idempotente: no duplica nada. */
@@ -91,7 +92,18 @@ export async function cargarExcel(ruta: string): Promise<Resumen> {
     });
   }
 
+  for (const m of leerHoja(libro, "motivos")) {
+    if (!TIPOS_OPERACION.includes(m.tipo_operacion as TipoOperacion)) throw new Error(`Tipo de operación desconocido: ${m.tipo_operacion}`);
+    const tipo = m.tipo_operacion as TipoOperacion;
+    await prisma.motivo.upsert({
+      where: { tipoOperacion_nombre: { tipoOperacion: tipo, nombre: m.nombre } },
+      update: {},
+      create: { tipoOperacion: tipo, nombre: m.nombre, exigeEvidencia: m.exige_evidencia.toUpperCase() === "SI" },
+    });
+  }
+
   return {
+    motivos: await prisma.motivo.count(),
     usuarios: await prisma.usuario.count(),
     categorias: await prisma.categoria.count(),
     referencias: await prisma.referencia.count(),

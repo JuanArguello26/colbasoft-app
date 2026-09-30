@@ -30,3 +30,84 @@ export interface ReferenciaResumen {
   activa: boolean;
   skus: number;
 }
+
+export const TIPOS_OPERACION = ["AJUSTE", "ANULACION", "SALIDA", "DESCARTE_ALERTA"] as const;
+export type TipoOperacion = (typeof TIPOS_OPERACION)[number];
+
+export const ZONA_TIPOS = ["RECEPCION", "ALMACENAMIENTO", "PREPARACION_SALIDA", "CUARENTENA"] as const;
+export type ZonaTipo = (typeof ZONA_TIPOS)[number];
+
+export interface SesionInfo extends UsuarioSesion {
+  debeCambiarClave: boolean;
+  /** Instante (ms desde epoch) en que la sesión se cierra por inactividad si no hay actividad. */
+  expiraEn: number;
+  /** Segundos de aviso antes del cierre por inactividad. */
+  avisoSegundos: number;
+}
+
+export interface UsuarioAdmin extends UsuarioSesion {
+  activo: boolean;
+  bloqueado: boolean;
+  intentosFallidos: number;
+  debeCambiarClave: boolean;
+}
+
+export interface ParametroVista {
+  clave: string;
+  descripcion: string;
+  unidad: string;
+  valor: number;
+  porDefecto: number;
+  minimo: number;
+  maximo: number;
+  modificado: boolean;
+}
+
+export interface MotivoVista {
+  id: string;
+  tipoOperacion: TipoOperacion;
+  nombre: string;
+  exigeEvidencia: boolean;
+  activo: boolean;
+}
+
+export interface RegistroBitacoraVista {
+  seq: string;
+  instante: string;
+  actorTipo: "USUARIO" | "SISTEMA";
+  usuarioLogin: string | null;
+  modulo: string;
+  evento: string;
+  entidad: string | null;
+  entidadId: string | null;
+  detalle: unknown;
+  origen: string | null;
+}
+
+export interface UbicacionVista {
+  id: string;
+  codigo: string;
+  activa: boolean;
+  capacidad: number | null;
+  unidadCapacidad: UnidadMedida | null;
+}
+
+export interface ZonaVista {
+  id: string;
+  codigo: string;
+  nombre: string;
+  tipo: ZonaTipo;
+  ubicaciones: UbicacionVista[];
+}
+
+export interface BodegaVista {
+  id: string;
+  codigo: string;
+  nombre: string;
+  zonas: ZonaVista[];
+}
+
+export interface ReferenciaDetalle extends ReferenciaResumen {
+  tallas: string[];
+  colores: string[];
+}

@@ -1,4 +1,5 @@
 import { defineConfig } from "vitest/config";
+import { urlPrueba } from "./test/urlPrueba.js";
 
 // Las pruebas usan la base de datos local (npm run db:up) y las variables de apps/api/.env.
 try {
@@ -9,8 +10,10 @@ try {
 
 export default defineConfig({
   test: {
+    env: { DATABASE_URL: urlPrueba() },
+    globalSetup: ["./test/preparar-bd.ts"],
     testTimeout: 30000,
-    hookTimeout: 60000,
+    hookTimeout: 120000,
     fileParallelism: false,
   },
 });

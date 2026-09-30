@@ -24,6 +24,19 @@ enum UnidadMedida {
   KILOGRAMOS
 }
 
+enum ActorTipo {
+  USUARIO
+  SISTEMA
+}
+
+/// CD-36: el motivo tipificado es obligatorio en ajustes, anulaciones, salidas y descartes de alerta.
+enum TipoOperacion {
+  AJUSTE
+  ANULACION
+  SALIDA
+  DESCARTE_ALERTA
+}
+
 enum ZonaTipo {
   RECEPCION
   ALMACENAMIENTO
@@ -39,11 +52,60 @@ model Usuario {
   rol          Rol
   activo       Boolean  @default(true)
   creadoEn     DateTime @default(now())
+
+  /// RF-ACC-004: intentos fallidos consecutivos; al llegar al límite configurado la cuenta se bloquea.
+  intentosFallidos Int     @default(0)
+  bloqueado        Boolean @default(false)
+  /// HU-USR-001 criterio 5: el usuario nuevo debe cambiar su contraseña en el primer acceso.
+  debeCambiarClave Boolean @default(false)
+}
+
+/// Valor modificado de un parámetro de configuración (M-19). Sin fila, rige el valor por defecto de la definición.
+model Parametro {
+  clave         String   @id
+  valor         Float
+  actualizadoEn DateTime @default(now())
+  actualizadoPor String?
+}
+
+/// Motivo tipificado (CD-36). Nunca se elimina: se desactiva (RN-063).
+model Motivo {
+  id            String        @id @default(uuid())
+  tipoOperacion TipoOperacion
+  nombre        String
+  exigeEvidencia Boolean      @default(false)
+  activo        Boolean       @default(true)
+
+  @@unique([tipoOperacion, nombre])
+}
+
+/// Bitácora de auditoría (AG-16). Inmutable: la base de datos rechaza UPDATE, DELETE y TRUNCATE (RN-061).
+/// Cada registro encadena el hash del anterior; toda discontinuidad es un hallazgo crítico.
+model RegistroBitacora {
+  seq          BigInt    @id @default(autoincrement())
+  instante     DateTime
+  actorTipo    ActorTipo
+  usuarioId    String?
+  usuarioLogin String?
+  modulo       String
+  evento       String
+  entidad      String?
+  entidadId    String?
+  detalle      Json?
+  origen       String?
+  hashAnterior String
+  hash         String
+
+  @@index([instante])
+  @@index([modulo])
+  @@index([evento])
+  @@index([usuarioId])
 }
 
 model Categoria {
   id          String       @id @default(uuid())
   nombre      String       @unique
+  activa      Boolean      @default(true)
   referencias Referencia[]
 }
 
@@ -113,6 +175,9 @@ model Ubicacion {
   zona     Zona    @relation(fields: [zonaId], references: [id])
   codigo   String
   activa   Boolean @default(true)
+  /// HU-BOD-002: capacidad en una unidad configurada. Sin capacidad = ilimitada y pendiente de configurar (HD-17 abierta).
+  capacidad       Float?
+  unidadCapacidad UnidadMedida?
 
   @@unique([bodegaId, codigo])
 }

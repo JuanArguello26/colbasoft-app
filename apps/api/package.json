@@ -12,7 +12,8 @@
     "generate": "prisma generate",
     "excel": "tsx scripts/generar-excel.ts",
     "seed": "tsx --env-file=.env scripts/cargar-excel.ts",
-    "test": "vitest run"
+    "test": "vitest run",
+    "db:test:reset": "tsx --env-file=.env scripts/reiniciar-bd-pruebas.ts"
   },
   "dependencies": {
     "@colbasoft/shared": "*",

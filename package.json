@@ -9,6 +9,7 @@
     "db:down": "docker compose down",
     "db:migrate": "npm run migrate -w @colbasoft/api",
     "db:excel": "npm run excel -w @colbasoft/api",
+    "db:test:reset": "npm run db:test:reset -w @colbasoft/api",
     "db:seed": "npm run seed -w @colbasoft/api",
     "dev:api": "npm run dev -w @colbasoft/api",
     "dev:web": "npm run dev -w @colbasoft/web",
