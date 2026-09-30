@@ -1,0 +1,20 @@
+# Base de datos local. El Excel de datos ficticios NO es la base de datos: solo se carga en ella.
+services:
+  db:
+    image: postgres:16
+    container_name: colbasoft-db
+    environment:
+      POSTGRES_USER: colbasoft
+      POSTGRES_PASSWORD: colbasoft
+      POSTGRES_DB: colbasoft
+    ports:
+      - "5433:5432"
+    volumes:
+      - colbasoft-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U colbasoft -d colbasoft"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+volumes:
+  colbasoft-db-data:

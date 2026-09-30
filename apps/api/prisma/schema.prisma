@@ -1,0 +1,118 @@
+// Esquema del corte C1 (bloque C1-1: Fundación). Se amplía por bloques.
+// Entidades del dominio: E-01 Referencia, E-02 SKU, E-03 Categoría, E-05 Bodega, E-06 Zona, E-07 Ubicación, E-19 Usuario.
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Rol {
+  ADMINISTRADOR
+  JEFE_BODEGA
+  COORDINADOR_BODEGA
+  AUXILIAR_BODEGA
+  AUDITOR
+}
+
+enum UnidadMedida {
+  UNIDADES
+  METROS
+  ROLLOS
+  KILOGRAMOS
+}
+
+enum ZonaTipo {
+  RECEPCION
+  ALMACENAMIENTO
+  PREPARACION_SALIDA
+  CUARENTENA
+}
+
+model Usuario {
+  id           String   @id @default(uuid())
+  login        String   @unique
+  nombre       String
+  passwordHash String
+  rol          Rol
+  activo       Boolean  @default(true)
+  creadoEn     DateTime @default(now())
+}
+
+model Categoria {
+  id          String       @id @default(uuid())
+  nombre      String       @unique
+  referencias Referencia[]
+}
+
+/// RN-MAE-001: el código de referencia es único en todo el catálogo (activa o inactiva).
+model Referencia {
+  id           String       @id @default(uuid())
+  codigo       String       @unique
+  descripcion  String
+  categoriaId  String
+  categoria    Categoria    @relation(fields: [categoriaId], references: [id])
+  unidadMedida UnidadMedida
+  activa       Boolean      @default(true)
+  skus         Sku[]
+}
+
+model Talla {
+  id     String @id @default(uuid())
+  nombre String @unique
+  skus   Sku[]
+}
+
+model Color {
+  id     String @id @default(uuid())
+  nombre String @unique
+  skus   Sku[]
+}
+
+/// SKU = Referencia + Talla + Color, irrepetible (CD-05).
+model Sku {
+  id           String     @id @default(uuid())
+  referenciaId String
+  referencia   Referencia @relation(fields: [referenciaId], references: [id])
+  tallaId      String
+  talla        Talla      @relation(fields: [tallaId], references: [id])
+  colorId      String
+  color        Color      @relation(fields: [colorId], references: [id])
+
+  @@unique([referenciaId, tallaId, colorId])
+}
+
+model Bodega {
+  id          String      @id @default(uuid())
+  codigo      String      @unique
+  nombre      String
+  zonas       Zona[]
+  ubicaciones Ubicacion[]
+}
+
+model Zona {
+  id          String      @id @default(uuid())
+  bodegaId    String
+  bodega      Bodega      @relation(fields: [bodegaId], references: [id])
+  codigo      String
+  nombre      String
+  tipo        ZonaTipo
+  ubicaciones Ubicacion[]
+
+  @@unique([bodegaId, codigo])
+}
+
+/// RN-MAE-005 / RN-014: el código de ubicación es único dentro de la bodega.
+model Ubicacion {
+  id       String  @id @default(uuid())
+  bodegaId String
+  bodega   Bodega  @relation(fields: [bodegaId], references: [id])
+  zonaId   String
+  zona     Zona    @relation(fields: [zonaId], references: [id])
+  codigo   String
+  activa   Boolean @default(true)
+
+  @@unique([bodegaId, codigo])
+}

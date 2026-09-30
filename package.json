@@ -1,0 +1,20 @@
+{
+  "name": "colbasoft-app",
+  "private": true,
+  "version": "0.1.0",
+  "description": "COLBASOFT: plataforma de trazabilidad de inventarios (proyecto de grado). Esqueleto del corte C1.",
+  "workspaces": ["apps/*", "packages/*"],
+  "scripts": {
+    "db:up": "docker compose up -d --wait",
+    "db:down": "docker compose down",
+    "db:migrate": "npm run migrate -w @colbasoft/api",
+    "db:excel": "npm run excel -w @colbasoft/api",
+    "db:seed": "npm run seed -w @colbasoft/api",
+    "dev:api": "npm run dev -w @colbasoft/api",
+    "dev:web": "npm run dev -w @colbasoft/web",
+    "build": "npm run build -w @colbasoft/shared && npm run build -w @colbasoft/api && npm run build -w @colbasoft/web",
+    "test": "npm run test -w @colbasoft/api",
+    "typecheck": "npm run typecheck -w @colbasoft/shared && npm run typecheck -w @colbasoft/api && npm run typecheck -w @colbasoft/web"
+  },
+  "engines": { "node": ">=22" }
+}
