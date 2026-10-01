@@ -1,5 +1,5 @@
 import type {
-  BodegaVista, DesviacionVista, ExistenciaReferencia, KardexVista, PiezasDeLoteVista, UbicacionDeReferencia, DocumentoEntradaResumen, DocumentoEntradaVista, EstadoExistencia, EtiquetaVista, PropuestaUbicacion, TipoPieza, IdentificadorResumen, LoteVista, ModoIdentificacion, ResolucionVista, SkuVista, MotivoVista, ParametroVista, ReferenciaDetalle, ReferenciaResumen, RegistroBitacoraVista,
+  BodegaVista, DesviacionVista, MovimientoInternoResultado, PiezasMovibles, ExistenciaReferencia, KardexVista, PiezasDeLoteVista, UbicacionDeReferencia, DocumentoEntradaResumen, DocumentoEntradaVista, EstadoExistencia, EtiquetaVista, PropuestaUbicacion, TipoPieza, IdentificadorResumen, LoteVista, ModoIdentificacion, ResolucionVista, SkuVista, MotivoVista, ParametroVista, ReferenciaDetalle, ReferenciaResumen, RegistroBitacoraVista,
   Rol, SesionInfo, TipoOperacion, UnidadMedida, UsuarioAdmin, UsuarioSesion, ZonaTipo,
 } from "@colbasoft/shared";
 
@@ -91,6 +91,9 @@ export const api = {
   kardex: (q: Record<string, string>) => pedir<KardexVista>(`/api/inventario/kardex?${new URLSearchParams(q)}`, undefined, true),
   urlKardexCsv: (q: Record<string, string>) => `/api/inventario/kardex?${new URLSearchParams({ ...q, formato: "csv" })}`,
   anularMovimiento: (movimientoId: string, motivoId: string) => pedir<{ anulado: number; inverso: number }>(`/api/inventario/movimientos/${movimientoId}/anular`, cuerpo({ motivoId })),
+  // movimientos internos (C1-5)
+  piezasMovibles: (q: Record<string, string>) => pedir<PiezasMovibles>(`/api/movimientos/piezas?${new URLSearchParams(q)}`, undefined, true),
+  moverPieza: (d: { piezaId: string; destinoCodigo?: string; destinoId?: string; origenCodigo?: string; origenId?: string; mercanciaCodigo?: string }) => pedir<MovimientoInternoResultado>("/api/movimientos/internos", cuerpo(d)),
   // parámetros y motivos
   parametros: () => pedir<ParametroVista[]>("/api/parametros"),
   guardarParametro: (clave: string, valor: number) => pedir<{ clave: string; anterior: number; nuevo: number }>(`/api/parametros/${clave}`, enviar("PUT", { valor })),

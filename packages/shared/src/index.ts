@@ -356,3 +356,34 @@ export interface PiezasDeLoteVista {
   lote: { id: string; codigo: string; sku: SkuVista };
   piezas: PiezaDeLoteVista[];
 }
+
+// ---- Movimientos internos (bloque C1-5) ----
+
+/** Una pieza con existencia, ofrecida para moverla (HU-MOV-008): dónde está hoy y si se puede mover. */
+export interface PiezaMovible {
+  id: string;
+  numero: number;
+  tipo: TipoPieza;
+  /** Lo que tiene la pieza en esa ubicación y estado. */
+  cantidad: number;
+  ubicacionId: string;
+  ubicacion: string;
+  estado: EstadoExistencia;
+  /** Solo la existencia disponible se mueve con un movimiento interno. */
+  movible: boolean;
+}
+
+export interface PiezasMovibles {
+  lote: { id: string; codigo: string; sku: SkuVista };
+  piezas: PiezaMovible[];
+}
+
+export interface MovimientoInternoResultado {
+  movimientoId: string;
+  secuencia: number;
+  pieza: number;
+  cantidad: number;
+  origen: string;
+  destino: string;
+  modo: ModoIdentificacion;
+}

@@ -2,7 +2,7 @@
 
 Plataforma de trazabilidad de inventarios para PYMES textiles (proyecto de grado). Este repositorio contiene **el código**; los documentos (SPEC, SRS, dominio, arquitectura) están en el repositorio `colbasoft-docs`.
 
-> **Estado:** corte de entrega **C1** (SPEC v1.5 §12.7). **Bloques C1-1 (Fundación), C1-2 (Identificación y lotes), C1-3 (Entradas, piezas y ubicación) y C1-4 (Kardex y consulta de existencia) completos**; sigue C1-5 (movimientos internos).
+> **Estado:** corte de entrega **C1** (SPEC v1.5 §12.7). **Bloques C1-1 (Fundación), C1-2 (Identificación y lotes), C1-3 (Entradas, piezas y ubicación), C1-4 (Kardex y consulta de existencia) y C1-5 (Movimientos internos) completos**; sigue C1-6 (salidas y corte parcial).
 > **Datos:** el proyecto se valida **solo con datos ficticios** (SPEC §12.8). El Excel es **únicamente una carga de datos de prueba**; la base de datos es PostgreSQL.
 
 ## Pila (ADR-001)
@@ -95,6 +95,16 @@ Las pantallas se ven según el rol (SPEC §2.7): el Jefe consulta parámetros y 
 
 Una migración (`c1_4_kardex_anulacion`) añade el tipo `ANULACION` y las columnas `anulaAId` (único: un movimiento se anula una sola vez) y `motivoId`, con un CHECK que obliga a toda anulación a decir qué neutraliza y con qué motivo.
 
+## Estado del bloque C1-5 (Movimientos internos)
+
+| Historia | Qué hay |
+|---|---|
+| HU-MOV-001 | Se escanea la mercancía y luego la ubicación destino (o se elige a mano: identificación manual) y se registra un movimiento interno; se mueve la pieza completa, el total no cambia, queda en el kardex y la pantalla confirma |
+| HU-MOV-002 | Rechaza mover más de lo que hay, destino igual al origen, destino inactivo, sin capacidad o de la zona de recepción, y existencia no disponible; cada rechazo explica el motivo en lenguaje llano |
+| HU-MOV-008 | Tras escanear el QR del SKU + Lote se listan las piezas del lote; la ubicación de origen filtra y verifica; no se confirma sin pieza seleccionada; el kardex guarda la pieza |
+
+Un movimiento interno es un solo movimiento con dos asientos (−origen, +destino) en una transacción. Dos movimientos simultáneos de la misma pieza: solo uno se aplica (el candado de la base de datos rechaza el segundo y se explica). Un movimiento interno se corrige con una anulación (C1-4).
+
 ## Provisional o pendiente
 
 - **Parámetros y rangos:** son valores **de demostración**; el SPEC no fija cifras (se calibran con datos reales).
@@ -121,6 +131,12 @@ Una migración (`c1_4_kardex_anulacion`) añade el tipo `ANULACION` y las column
   - **Kardex del Auxiliar:** solo lo que él movió y los últimos 30 días (matriz de permisos, «Consultar kardex»); los demás roles ven todo.
   - **Existencia resultante** es el acumulado dentro de lo consultado (pieza, lote o unidad); dentro de un movimiento, el origen se lista antes que el destino.
   - La anulación con evidencia (`exigeEvidencia`) no está soportada: los motivos de anulación sembrados no la exigen.
+- **Decisiones de interpretación del bloque C1-5** (revisar con el Director):
+  - **Solo se mueve existencia disponible.** La existencia «en recepción» se ubica desde la entrada (RN-MOV-010); el rechazo por existencia **inmovilizada** (RF-MOV-006) no se puede ejercitar porque ese estado llega después del corte.
+  - **La zona de recepción no es destino** de un movimiento interno: lo ya disponible no vuelve a «en recepción» (RN-EXI-007). El SRS no lo dice de forma expresa.
+  - **No hay propuesta ni desviación** en el movimiento interno: RN-MOV-001/003 solo se definen para la primera ubicación.
+  - **La cantidad es opcional en la API:** si se envía, debe ser la de la pieza completa; más es «más de lo existente» (RN-EXI-003) y menos es un corte parcial, que se registra como salida (RN-MOV-012, C1-6).
+  - **Permisos:** Administrador, Jefe, Coordinador y Auxiliar pueden mover; el Auditor no. La matriz del SRS solo nombra al Auxiliar para esta historia.
 - **Lectura con cámara:** usa `getUserMedia` y `jsqr`; exige HTTPS o `localhost`, y no se ha probado con una cámara real (solo la ruta de digitación manual y que el QR generado se decodifique de vuelta).
 - Retención local y sincronización sin conectividad: fuera del corte C1.
 

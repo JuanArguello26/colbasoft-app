@@ -13,6 +13,7 @@ import { rutasEntradas } from "./routes/entradas.js";
 import { rutasInventario } from "./routes/inventario.js";
 import { rutasIdentificadores } from "./routes/identificadores.js";
 import { rutasLotes } from "./routes/lotes.js";
+import { rutasMovimientos } from "./routes/movimientos.js";
 import { rutasMotivos } from "./routes/motivos.js";
 import { rutasParametros } from "./routes/parametros.js";
 import { rutasSalud } from "./routes/salud.js";
@@ -94,6 +95,7 @@ export async function construirApp(opciones: OpcionesApp): Promise<FastifyInstan
   await app.register(rutasIdentificadores, { prefix: "/api/identificadores" });
   await app.register(rutasEntradas, { prefix: "/api/entradas" });
   await app.register(rutasInventario, { prefix: "/api/inventario" });
+  await app.register(rutasMovimientos, { prefix: "/api/movimientos" });
   await app.register(rutasParametros, { prefix: "/api/parametros" });
   await app.register(rutasMotivos, { prefix: "/api/motivos" });
   await app.register(rutasBitacora, { prefix: "/api/bitacora" });
