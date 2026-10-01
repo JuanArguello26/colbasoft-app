@@ -1,5 +1,5 @@
-// Esquema del corte C1 (bloque C1-1: Fundación). Se amplía por bloques.
-// Entidades del dominio: E-01 Referencia, E-02 SKU, E-03 Categoría, E-05 Bodega, E-06 Zona, E-07 Ubicación, E-19 Usuario.
+// Esquema del corte C1 (bloques C1-1 Fundación y C1-2 Identificación y lotes). Se amplía por bloques.
+// Entidades del dominio: E-01 Referencia, E-02 SKU, E-03 Categoría, E-05 Bodega, E-06 Zona, E-07 Ubicación, E-19 Usuario, Lote, Identificador.
 generator client {
   provider = "prisma-client-js"
 }
@@ -35,6 +35,17 @@ enum TipoOperacion {
   ANULACION
   SALIDA
   DESCARTE_ALERTA
+}
+
+/// RF-QRC-004: el identificador de ubicación es distinguible del de mercancía.
+enum IdentificadorTipo {
+  MERCANCIA
+  UBICACION
+}
+
+enum IdentificadorEstado {
+  ACTIVO
+  ANULADO
 }
 
 enum ZonaTipo {
@@ -143,7 +154,40 @@ model Sku {
   colorId      String
   color        Color      @relation(fields: [colorId], references: [id])
 
+  lotes        Lote[]
+
   @@unique([referenciaId, tallaId, colorId])
+}
+
+/// HU-LOT-001: todo ingreso queda asociado a un lote. RN-MAE-006: el código de lote es único dentro de su SKU.
+model Lote {
+  id            String         @id @default(uuid())
+  skuId         String
+  sku           Sku            @relation(fields: [skuId], references: [id])
+  codigo        String
+  /// Procedencia de la mercancía (texto libre hasta que existan los documentos de entrada, C1-3).
+  origen        String
+  fechaIngreso  DateTime       @default(now())
+  identificador Identificador?
+
+  @@unique([skuId, codigo])
+}
+
+/// RN-IDE-002: ningún identificador se repite jamás, ni tras su anulación. La base de datos rechaza DELETE y
+/// cualquier UPDATE que no sea el cambio de estado (migración c1_2_identificacion).
+/// DF5-01: el QR de mercancía identifica SKU + Lote (no ubicación ni cantidad). Un identificador es de mercancía (lote)
+/// o de ubicación, nunca de ambas cosas.
+model Identificador {
+  id          String              @id @default(uuid())
+  /// Valor que lleva el QR: COL-M-… (mercancía) o COL-U-… (ubicación).
+  codigo      String              @unique
+  tipo        IdentificadorTipo
+  estado      IdentificadorEstado @default(ACTIVO)
+  loteId      String?             @unique
+  lote        Lote?               @relation(fields: [loteId], references: [id])
+  ubicacionId String?             @unique
+  ubicacion   Ubicacion?          @relation(fields: [ubicacionId], references: [id])
+  creadoEn    DateTime            @default(now())
 }
 
 model Bodega {
@@ -178,6 +222,7 @@ model Ubicacion {
   /// HU-BOD-002: capacidad en una unidad configurada. Sin capacidad = ilimitada y pendiente de configurar (HD-17 abierta).
   capacidad       Float?
   unidadCapacidad UnidadMedida?
+  identificador   Identificador?
 
   @@unique([bodegaId, codigo])
 }

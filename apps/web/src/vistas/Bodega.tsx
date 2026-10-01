@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { UNIDADES_MEDIDA, ZONA_TIPOS, type UbicacionVista, type UnidadMedida, type ZonaTipo } from "@colbasoft/shared";
 import { api } from "../api";
 import { Aviso, Campo, Insignia, Modal, useCarga } from "../ui";
+import { Etiquetas } from "./Etiquetas";
 
 const NOMBRE_ZONA: Record<ZonaTipo, string> = { RECEPCION: "Recepción", ALMACENAMIENTO: "Almacenamiento", PREPARACION_SALIDA: "Preparación de salida", CUARENTENA: "Cuarentena" };
 
@@ -13,9 +14,15 @@ export function Bodega({ puedeEditar }: { puedeEditar: boolean }) {
   const [zonaDe, setZonaDe] = useState<string | null>(null);
   const [ubicDe, setUbicDe] = useState<string | null>(null);
   const [capDe, setCapDe] = useState<UbicacionVista | null>(null);
+  const [imprimir, setImprimir] = useState<string[] | null>(null);
 
   const refrescar = () => { recargar(); pend.recargar(); };
   async function correr(f: () => Promise<unknown>) { setMsg(""); try { await f(); refrescar(); } catch (e) { setMsg((e as Error).message); } }
+  /** HU-QRC-003: genera los QR que falten de la zona (no crea otros a las que ya lo tienen) y abre la impresión de toda la zona. */
+  async function qrDeZona(zonaId: string) {
+    setMsg("");
+    try { setImprimir((await api.generarQrUbicaciones({ zonaId })).identificadores.map((i) => i.id)); } catch (e) { setMsg((e as Error).message); }
+  }
 
   return (
     <section>
@@ -23,7 +30,7 @@ export function Bodega({ puedeEditar }: { puedeEditar: boolean }) {
         <h2>Estructura de bodega</h2>
         {puedeEditar && <button onClick={() => setNuevaBodega(true)}>Nueva bodega</button>}
       </div>
-      <p className="nota">Toda bodega tiene al menos una zona de recepción con una ubicación. Una ubicación sin capacidad se trata como ilimitada y figura como pendiente de configurar. El identificador QR de cada ubicación llega con el bloque de identificación.</p>
+      <p className="nota">Toda bodega tiene al menos una zona de recepción con una ubicación. Una ubicación sin capacidad se trata como ilimitada y figura como pendiente de configurar. Cada ubicación tiene su propio código QR, distinto del de la mercancía.</p>
       {(pend.datos?.length ?? 0) > 0 && <Aviso tipo="info">{pend.datos!.length} ubicaciones activas sin capacidad definida.</Aviso>}
       {msg && <Aviso tipo="error">{msg}</Aviso>}
       {error && <Aviso tipo="error">{error}</Aviso>}
@@ -34,7 +41,10 @@ export function Bodega({ puedeEditar }: { puedeEditar: boolean }) {
             <div key={z.id} className="zona">
               <div className="cabecera">
                 <h4>{z.nombre} <Insignia tono={z.tipo === "RECEPCION" ? "info" : "gris"}>{NOMBRE_ZONA[z.tipo]}</Insignia> <small>{z.codigo}</small></h4>
-                {puedeEditar && <button className="secundario" onClick={() => setUbicDe(z.id)}>+ Ubicación</button>}
+                <span className="acciones">
+                  {puedeEditar && <button className="secundario" onClick={() => qrDeZona(z.id)}>Imprimir QR de la zona</button>}
+                  {puedeEditar && <button className="secundario" onClick={() => setUbicDe(z.id)}>+ Ubicación</button>}
+                </span>
               </div>
               <ul className="ubicaciones">
                 {z.ubicaciones.map((u) => (
@@ -59,6 +69,7 @@ export function Bodega({ puedeEditar }: { puedeEditar: boolean }) {
       {nuevaBodega && <FormBodega alCerrar={() => setNuevaBodega(false)} alGuardar={() => { setNuevaBodega(false); refrescar(); }} />}
       {zonaDe && <FormZona bodegaId={zonaDe} alCerrar={() => setZonaDe(null)} alGuardar={() => { setZonaDe(null); refrescar(); }} />}
       {ubicDe && <FormUbicacion zonaId={ubicDe} alCerrar={() => setUbicDe(null)} alGuardar={() => { setUbicDe(null); refrescar(); }} />}
+      {imprimir && <Etiquetas ids={imprimir} alCerrar={() => setImprimir(null)} />}
       {capDe && <FormCapacidad u={capDe} alCerrar={() => setCapDe(null)} alGuardar={() => { setCapDe(null); refrescar(); }} />}
     </section>
   );

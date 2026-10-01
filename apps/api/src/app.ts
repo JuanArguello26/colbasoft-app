@@ -9,6 +9,8 @@ import { rutasAuth } from "./routes/auth.js";
 import { rutasBitacora } from "./routes/bitacora.js";
 import { rutasBodega } from "./routes/bodega.js";
 import { rutasCatalogo } from "./routes/catalogo.js";
+import { rutasIdentificadores } from "./routes/identificadores.js";
+import { rutasLotes } from "./routes/lotes.js";
 import { rutasMotivos } from "./routes/motivos.js";
 import { rutasParametros } from "./routes/parametros.js";
 import { rutasSalud } from "./routes/salud.js";
@@ -86,6 +88,8 @@ export async function construirApp(opciones: OpcionesApp): Promise<FastifyInstan
   await app.register(rutasUsuarios, { prefix: "/api/usuarios" });
   await app.register(rutasCatalogo, { prefix: "/api/catalogo" });
   await app.register(rutasBodega, { prefix: "/api/bodega" });
+  await app.register(rutasLotes, { prefix: "/api/lotes" });
+  await app.register(rutasIdentificadores, { prefix: "/api/identificadores" });
   await app.register(rutasParametros, { prefix: "/api/parametros" });
   await app.register(rutasMotivos, { prefix: "/api/motivos" });
   await app.register(rutasBitacora, { prefix: "/api/bitacora" });

@@ -76,3 +76,17 @@ small { color: var(--suave); font-weight: 400; }
 td.acciones { white-space: nowrap; }
 td.acciones button, .lista .acciones button { min-height: 36px; padding: .35rem .7rem; font-size: .9rem; }
 .tabla-envoltura table { min-width: 640px; }
+
+/* C1-2: escaneo y etiquetas QR */
+.visor { width: 100%; max-height: 50vh; object-fit: cover; border-radius: 10px; background: #000; margin: .75rem 0; }
+.hoja-etiquetas { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: .75rem; margin-top: 1rem; }
+.etiqueta { margin: 0; padding: .6rem; border: 1px dashed var(--borde); border-radius: 6px; display: grid; justify-items: center; gap: .3rem; break-inside: avoid; background: #fff; color: #000; }
+.etiqueta .qr { width: 150px; height: 150px; } .etiqueta .qr svg { width: 100%; height: 100%; }
+.etiqueta figcaption { display: grid; gap: .1rem; text-align: center; font-size: .8rem; }
+.etiqueta code { font-size: .75rem; background: none; padding: 0; }
+@media print {
+  body * { visibility: hidden; }
+  .hoja-etiquetas, .hoja-etiquetas * { visibility: visible; }
+  .hoja-etiquetas { position: absolute; inset: 0 auto auto 0; width: 100%; margin: 0; }
+  .etiqueta { border: 1px solid #000; }
+}

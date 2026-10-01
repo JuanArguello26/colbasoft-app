@@ -1,5 +1,5 @@
 import type {
-  BodegaVista, MotivoVista, ParametroVista, ReferenciaDetalle, ReferenciaResumen, RegistroBitacoraVista,
+  BodegaVista, EtiquetaVista, IdentificadorResumen, LoteVista, ModoIdentificacion, ResolucionVista, SkuVista, MotivoVista, ParametroVista, ReferenciaDetalle, ReferenciaResumen, RegistroBitacoraVista,
   Rol, SesionInfo, TipoOperacion, UnidadMedida, UsuarioAdmin, UsuarioSesion, ZonaTipo,
 } from "@colbasoft/shared";
 
@@ -55,6 +55,22 @@ export const api = {
   crearUbicacion: (zonaId: string, d: { codigo: string; capacidad?: number; unidadCapacidad?: UnidadMedida }) => pedir<{ id: string }>(`/api/bodega/zonas/${zonaId}/ubicaciones`, cuerpo(d)),
   capacidad: (id: string, d: { capacidad: number | null; unidadCapacidad: UnidadMedida | null }) => pedir<{ ok: boolean }>(`/api/bodega/ubicaciones/${id}/capacidad`, enviar("PATCH", d)),
   ubicacionAccion: (id: string, accion: "desactivar" | "reactivar") => pedir<{ ok: boolean }>(`/api/bodega/ubicaciones/${id}/${accion}`, { method: "POST" }),
+  // lotes e identificación (C1-2)
+  skus: () => pedir<SkuVista[]>("/api/lotes/skus"),
+  lotes: (q: { skuId?: string; q?: string } = {}) => pedir<LoteVista[]>(`/api/lotes?${new URLSearchParams(Object.entries(q).filter(([, v]) => v) as [string, string][])}`),
+  crearLote: (d: { skuId: string; codigo: string; origen: string }) => pedir<LoteVista>("/api/lotes", cuerpo(d)),
+  generarQrMercancia: (loteId: string) => pedir<IdentificadorResumen>("/api/identificadores/mercancia", cuerpo({ loteId })),
+  generarQrUbicaciones: (d: { zonaId: string } | { ubicacionIds: string[] }) => pedir<{ identificadores: IdentificadorResumen[]; nuevos: number }>("/api/identificadores/ubicaciones", cuerpo(d)),
+  etiquetas: (ids: string[]) => pedir<EtiquetaVista[]>(`/api/identificadores/etiquetas?ids=${ids.join(",")}`),
+  /** Resuelve un código escaneado o digitado. Los rechazos esperados (desconocido, anulado) vuelven como resultado, no como excepción. */
+  resolver: async (codigo: string, modo: ModoIdentificacion): Promise<{ ok: true; datos: ResolucionVista } | { ok: false; mensaje: string; ofrecerNovedad: boolean; anulado: boolean }> => {
+    const r = await fetch("/api/identificadores/resolver", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ codigo, modo }) });
+    const c = (await r.json().catch(() => ({}))) as { error?: string; ofrecerNovedad?: boolean; estado?: string };
+    alActividad?.();
+    if (r.ok) return { ok: true, datos: c as unknown as ResolucionVista };
+    if (r.status === 404 || r.status === 409) return { ok: false, mensaje: c.error ?? "No se pudo resolver el código.", ofrecerNovedad: c.ofrecerNovedad === true, anulado: c.estado === "ANULADO" };
+    throw new ErrorApi(r.status, c.error ?? "Error inesperado.");
+  },
   // parámetros y motivos
   parametros: () => pedir<ParametroVista[]>("/api/parametros"),
   guardarParametro: (clave: string, valor: number) => pedir<{ clave: string; anterior: number; nuevo: number }>(`/api/parametros/${clave}`, enviar("PUT", { valor })),

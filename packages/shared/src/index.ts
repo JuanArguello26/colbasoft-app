@@ -111,3 +111,72 @@ export interface ReferenciaDetalle extends ReferenciaResumen {
   tallas: string[];
   colores: string[];
 }
+
+export const IDENTIFICADOR_TIPOS = ["MERCANCIA", "UBICACION"] as const;
+export type IdentificadorTipo = (typeof IDENTIFICADOR_TIPOS)[number];
+export type IdentificadorEstado = "ACTIVO" | "ANULADO";
+/** RF-QRC-009: cómo se identificó algo, por escaneo o por selección o digitación manual. */
+export type ModoIdentificacion = "ESCANEO" | "MANUAL";
+
+export interface SkuVista {
+  id: string;
+  referencia: string;
+  descripcion: string;
+  talla: string;
+  color: string;
+  unidadMedida: UnidadMedida;
+}
+
+export interface IdentificadorResumen {
+  id: string;
+  codigo: string;
+  tipo: IdentificadorTipo;
+  estado: IdentificadorEstado;
+  loteId: string | null;
+  ubicacionId: string | null;
+}
+
+export interface LoteVista {
+  id: string;
+  codigo: string;
+  origen: string;
+  fechaIngreso: string;
+  sku: SkuVista;
+  identificador: { id: string; codigo: string; estado: IdentificadorEstado } | null;
+}
+
+/** Datos de una etiqueta imprimible: el QR y la información legible de respaldo (HU-QRC-001 criterio 3). */
+export interface EtiquetaVista {
+  id: string;
+  codigo: string;
+  tipo: IdentificadorTipo;
+  estado: IdentificadorEstado;
+  /** Imagen SVG del QR, generada por el servidor. */
+  svg: string;
+  /** Mercancía: referencia, talla, color y lote. */
+  mercancia?: { referencia: string; descripcion: string; talla: string; color: string; lote: string };
+  /** Ubicación: bodega, zona y código. */
+  ubicacion?: { bodega: string; zona: string; codigo: string };
+}
+
+export interface ExistenciaEnUbicacion {
+  ubicacionId: string;
+  ubicacion: string;
+  cantidad: number;
+}
+
+/** Resultado de resolver un identificador escaneado o digitado (HU-QRC-002). */
+export type ResolucionVista =
+  | {
+      tipo: "MERCANCIA";
+      identificador: { codigo: string; estado: IdentificadorEstado };
+      sku: SkuVista;
+      lote: { id: string; codigo: string; origen: string; fechaIngreso: string };
+      /** Ubicaciones donde el SKU + Lote tiene existencia (vacío hasta que existan los movimientos, C1-3). */
+      ubicaciones: ExistenciaEnUbicacion[];
+    }
+  | {
+      tipo: "UBICACION";
+      identificador: { codigo: string; estado: IdentificadorEstado };
+      ubicacion: { id: string; codigo: string; zona: string; bodega: string; activa: boolean };
+    };
