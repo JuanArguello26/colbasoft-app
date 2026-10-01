@@ -5,17 +5,19 @@ import { Aviso, Campo } from "./ui";
 import { Bitacora } from "./vistas/Bitacora";
 import { Bodega } from "./vistas/Bodega";
 import { Catalogo } from "./vistas/Catalogo";
+import { Entradas } from "./vistas/Entradas";
 import { Escanear } from "./vistas/Escanear";
 import { Identificacion } from "./vistas/Identificacion";
 import { Motivos } from "./vistas/Motivos";
 import { Parametros } from "./vistas/Parametros";
 import { Usuarios } from "./vistas/Usuarios";
 
-type Vista = "catalogo" | "identificacion" | "escanear" | "bodega" | "motivos" | "usuarios" | "parametros" | "bitacora";
+type Vista = "catalogo" | "entradas" | "identificacion" | "escanear" | "bodega" | "motivos" | "usuarios" | "parametros" | "bitacora";
 
 interface Pestana { id: Vista; titulo: string; roles: Rol[] | "todos" }
 const PESTANAS: Pestana[] = [
   { id: "catalogo", titulo: "Catálogo", roles: "todos" },
+  { id: "entradas", titulo: "Entradas", roles: "todos" },
   { id: "identificacion", titulo: "Lotes y QR", roles: "todos" },
   { id: "escanear", titulo: "Escanear", roles: ["ADMINISTRADOR", "JEFE_BODEGA", "COORDINADOR_BODEGA", "AUXILIAR_BODEGA"] },
   { id: "bodega", titulo: "Bodega", roles: "todos" },
@@ -146,6 +148,15 @@ function Shell({ sesion, refrescar, alSalir }: { sesion: SesionInfo; refrescar: 
       </nav>
       <main className="tarjeta">
         {vista === "catalogo" && <Catalogo puedeEditar={rol === "ADMINISTRADOR" || rol === "JEFE_BODEGA"} />}
+        {vista === "entradas" && (
+          <Entradas permisos={{
+            crear: rol === "ADMINISTRADOR" || rol === "JEFE_BODEGA" || rol === "COORDINADOR_BODEGA",
+            recibir: rol !== "AUDITOR",
+            confirmar: rol === "ADMINISTRADOR" || rol === "JEFE_BODEGA" || rol === "COORDINADOR_BODEGA",
+            autorizar: rol === "ADMINISTRADOR" || rol === "JEFE_BODEGA",
+            verDesviaciones: rol === "ADMINISTRADOR" || rol === "JEFE_BODEGA" || rol === "COORDINADOR_BODEGA",
+          }} />
+        )}
         {vista === "identificacion" && <Identificacion puedeGenerar={rol === "ADMINISTRADOR" || rol === "JEFE_BODEGA" || rol === "COORDINADOR_BODEGA"} />}
         {vista === "escanear" && <Escanear />}
         {vista === "bodega" && <Bodega puedeEditar={rol === "ADMINISTRADOR"} />}

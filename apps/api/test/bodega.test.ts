@@ -97,5 +97,5 @@ describe("RN-063, RN-013 y RN-EXI-007 · desactivar ubicaciones", () => {
     expect(r.statusCode).toBe(409);
   });
 
-  it.todo("una ubicación con existencia no puede desactivarse (RN-013): se activa con el bloque C1-3");
+  // RN-013 (una ubicación con existencia no se desactiva) se prueba en entradas.test.ts, donde existe el kardex.
 });

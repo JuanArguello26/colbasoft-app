@@ -25,10 +25,10 @@ export const rutasBodega: FastifyPluginAsync = async (app) => {
   const actor = (req: { user: { id: string; login: string } }) => ({ tipo: "USUARIO" as const, usuarioId: req.user.id, usuarioLogin: req.user.login });
 
   app.get("/", async (): Promise<BodegaVista[]> => {
-    const bodegas = await prisma.bodega.findMany({ orderBy: { codigo: "asc" }, include: { zonas: { orderBy: { codigo: "asc" }, include: { ubicaciones: { orderBy: { codigo: "asc" } } } } } });
+    const bodegas = await prisma.bodega.findMany({ orderBy: { codigo: "asc" }, include: { zonas: { orderBy: { codigo: "asc" }, include: { categoria: true, ubicaciones: { orderBy: { codigo: "asc" } } } } } });
     return bodegas.map((b) => ({
       id: b.id, codigo: b.codigo, nombre: b.nombre,
-      zonas: b.zonas.map((z) => ({ id: z.id, codigo: z.codigo, nombre: z.nombre, tipo: z.tipo, ubicaciones: z.ubicaciones.map((u) => ({ id: u.id, codigo: u.codigo, activa: u.activa, capacidad: u.capacidad, unidadCapacidad: u.unidadCapacidad })) })),
+      zonas: b.zonas.map((z) => ({ id: z.id, codigo: z.codigo, nombre: z.nombre, tipo: z.tipo, categoriaId: z.categoriaId, categoria: z.categoria?.nombre ?? null, ubicaciones: z.ubicaciones.map((u) => ({ id: u.id, codigo: u.codigo, activa: u.activa, capacidad: u.capacidad, unidadCapacidad: u.unidadCapacidad })) })),
     }));
   });
 
@@ -64,6 +64,21 @@ export const rutasBodega: FastifyPluginAsync = async (app) => {
       return nueva;
     });
     return reply.code(201).send({ id: z.id });
+  });
+
+  /** RN-MOV-001 / H-19: la categoría que recibe una zona alimenta el primer criterio de la propuesta de ubicación («zona por categoría»). */
+  app.patch("/zonas/:id/categoria", { preHandler: soloAdmin }, async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const d = z.object({ categoriaId: z.string().min(1).nullable() }).safeParse(req.body);
+    if (!d.success) return reply.code(422).send({ error: "Indique la categoría o null para quitarla." });
+    const zona = await prisma.zona.findUnique({ where: { id } });
+    if (!zona) return reply.code(404).send({ error: "Zona no encontrada." });
+    if (d.data.categoriaId && !(await prisma.categoria.findFirst({ where: { id: d.data.categoriaId, activa: true } }))) return reply.code(422).send({ error: "La categoría no existe o está desactivada." });
+    await prisma.$transaction(async (tx) => {
+      await tx.zona.update({ where: { id }, data: { categoriaId: d.data.categoriaId } });
+      await registrar(tx, { actor: actor(req), modulo: "BODEGA", evento: "zona_categoria_modificada", entidad: "Zona", entidadId: id, detalle: { zona: zona.codigo, anterior: zona.categoriaId, nueva: d.data.categoriaId }, origen: req.ip });
+    });
+    return { ok: true };
   });
 
   /** HU-BOD-001: el código de ubicación es único dentro de su bodega (RN-014). */

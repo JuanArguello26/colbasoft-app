@@ -71,16 +71,17 @@ bodegas.addRow(["B1", "Bodega Principal"]);
 
 const zonas = hoja("zonas");
 const ubicaciones = hoja("ubicaciones");
-const ZONAS: Array<[string, string, string, number]> = [
-  ["REC", "Recepción", "RECEPCION", 3],
-  ["ALM-A", "Almacenamiento A", "ALMACENAMIENTO", 8],
-  ["ALM-B", "Almacenamiento B", "ALMACENAMIENTO", 8],
-  ["ALM-C", "Almacenamiento C (telas)", "ALMACENAMIENTO", 6],
-  ["PRE", "Preparación de salida", "PREPARACION_SALIDA", 3],
-  ["CUA", "Cuarentena", "CUARENTENA", 2],
+// La quinta columna es la categoría que recibe la zona en la propuesta de ubicación (RN-MOV-001, «zona por categoría»).
+const ZONAS: Array<[string, string, string, number, string]> = [
+  ["REC", "Recepción", "RECEPCION", 3, ""],
+  ["ALM-A", "Almacenamiento A", "ALMACENAMIENTO", 8, "Prendas"],
+  ["ALM-B", "Almacenamiento B", "ALMACENAMIENTO", 8, "Insumos"],
+  ["ALM-C", "Almacenamiento C (telas)", "ALMACENAMIENTO", 6, "Telas"],
+  ["PRE", "Preparación de salida", "PREPARACION_SALIDA", 3, ""],
+  ["CUA", "Cuarentena", "CUARENTENA", 2, ""],
 ];
-for (const [codigo, nombre, tipo, n] of ZONAS) {
-  zonas.addRow(["B1", codigo, nombre, tipo]);
+for (const [codigo, nombre, tipo, n, categoria] of ZONAS) {
+  zonas.addRow(["B1", codigo, nombre, tipo, categoria]);
   for (let i = 1; i <= n; i++) ubicaciones.addRow(["B1", codigo, `${codigo}-${String(i).padStart(2, "0")}`]);
 }
 

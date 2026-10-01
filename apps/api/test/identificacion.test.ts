@@ -88,7 +88,7 @@ describe("HU-LOT-001 · asociar la mercancía a un lote", () => {
     }
   });
 
-  it.todo("criterios 1 y 4: al confirmar una entrada se crea o asocia el lote y ninguna existencia queda sin lote (C1-3)");
+  // Criterios 1 y 4 (al confirmar una entrada se crea o asocia el lote; ninguna existencia sin lote): entradas.test.ts.
 });
 
 describe("HU-QRC-001 · generar e imprimir códigos QR de la mercancía", () => {

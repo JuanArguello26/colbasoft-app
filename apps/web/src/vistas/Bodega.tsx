@@ -9,6 +9,7 @@ const NOMBRE_ZONA: Record<ZonaTipo, string> = { RECEPCION: "Recepción", ALMACEN
 export function Bodega({ puedeEditar }: { puedeEditar: boolean }) {
   const { datos, error, recargar } = useCarga(api.bodegas);
   const pend = useCarga(api.pendientesCapacidad);
+  const categorias = useCarga(() => api.conjunto("categorias"));
   const [msg, setMsg] = useState("");
   const [nuevaBodega, setNuevaBodega] = useState(false);
   const [zonaDe, setZonaDe] = useState<string | null>(null);
@@ -30,7 +31,7 @@ export function Bodega({ puedeEditar }: { puedeEditar: boolean }) {
         <h2>Estructura de bodega</h2>
         {puedeEditar && <button onClick={() => setNuevaBodega(true)}>Nueva bodega</button>}
       </div>
-      <p className="nota">Toda bodega tiene al menos una zona de recepción con una ubicación. Una ubicación sin capacidad se trata como ilimitada y figura como pendiente de configurar. Cada ubicación tiene su propio código QR, distinto del de la mercancía.</p>
+      <p className="nota">Toda bodega tiene al menos una zona de recepción con una ubicación. Una ubicación sin capacidad se trata como ilimitada y figura como pendiente de configurar. Cada ubicación tiene su propio código QR, distinto del de la mercancía. La categoría que recibe cada zona de almacenamiento es lo primero que mira el sistema al proponer dónde ubicar la mercancía.</p>
       {(pend.datos?.length ?? 0) > 0 && <Aviso tipo="info">{pend.datos!.length} ubicaciones activas sin capacidad definida.</Aviso>}
       {msg && <Aviso tipo="error">{msg}</Aviso>}
       {error && <Aviso tipo="error">{error}</Aviso>}
@@ -40,7 +41,14 @@ export function Bodega({ puedeEditar }: { puedeEditar: boolean }) {
           {b.zonas.map((z) => (
             <div key={z.id} className="zona">
               <div className="cabecera">
-                <h4>{z.nombre} <Insignia tono={z.tipo === "RECEPCION" ? "info" : "gris"}>{NOMBRE_ZONA[z.tipo]}</Insignia> <small>{z.codigo}</small></h4>
+                <h4>{z.nombre} <Insignia tono={z.tipo === "RECEPCION" ? "info" : "gris"}>{NOMBRE_ZONA[z.tipo]}</Insignia> <small>{z.codigo}</small>
+                  {z.tipo === "ALMACENAMIENTO" && (puedeEditar
+                    ? <select aria-label={`Categoría que recibe ${z.nombre}`} value={z.categoriaId ?? ""} onChange={(e) => correr(() => api.zonaCategoria(z.id, e.target.value || null))}>
+                        <option value="">Sin categoría</option>
+                        {(categorias.datos ?? []).map((c) => <option key={c.id} value={c.id}>Recibe: {c.nombre}</option>)}
+                      </select>
+                    : z.categoria && <Insignia tono="info">Recibe: {z.categoria}</Insignia>)}
+                </h4>
                 <span className="acciones">
                   {puedeEditar && <button className="secundario" onClick={() => qrDeZona(z.id)}>Imprimir QR de la zona</button>}
                   {puedeEditar && <button className="secundario" onClick={() => setUbicDe(z.id)}>+ Ubicación</button>}

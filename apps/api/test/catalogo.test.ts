@@ -83,9 +83,7 @@ describe("HU-CAT-002 · unidad de medida", () => {
     expect((await pedir(app, jefe, "PATCH", `/api/catalogo/referencias/${ref.id}`, { unidadMedida: "LITROS" })).statusCode).toBe(422);
   });
 
-  // RN-004 (criterios 2 y 4): hoy no existen movimientos. Se activa cuando exista el kardex (bloque C1-3).
-  it.todo("rechaza el cambio de unidad si la referencia ya tiene movimientos (RN-004)");
-  it.todo("no permite desactivar una referencia con existencia (RN-MAE-003)");
+  // RN-004 y RN-MAE-003 (con movimientos y con existencia) se prueban en entradas.test.ts, donde existe el kardex.
 });
 
 describe("RN-063 · nada se elimina", () => {

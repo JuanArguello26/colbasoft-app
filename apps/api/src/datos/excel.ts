@@ -4,7 +4,7 @@ export const HOJAS = {
   categorias: ["nombre"],
   referencias: ["codigo", "descripcion", "categoria", "unidad_medida", "tallas", "colores"],
   bodegas: ["codigo", "nombre"],
-  zonas: ["bodega", "codigo", "nombre", "tipo"],
+  zonas: ["bodega", "codigo", "nombre", "tipo", "categoria"],
   ubicaciones: ["bodega", "zona", "codigo"],
   motivos: ["tipo_operacion", "nombre", "exige_evidencia"],
 } as const;

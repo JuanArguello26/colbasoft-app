@@ -1,10 +1,10 @@
 import type {
-  BodegaVista, EtiquetaVista, IdentificadorResumen, LoteVista, ModoIdentificacion, ResolucionVista, SkuVista, MotivoVista, ParametroVista, ReferenciaDetalle, ReferenciaResumen, RegistroBitacoraVista,
+  BodegaVista, DesviacionVista, DocumentoEntradaResumen, DocumentoEntradaVista, EstadoExistencia, EtiquetaVista, PropuestaUbicacion, TipoPieza, IdentificadorResumen, LoteVista, ModoIdentificacion, ResolucionVista, SkuVista, MotivoVista, ParametroVista, ReferenciaDetalle, ReferenciaResumen, RegistroBitacoraVista,
   Rol, SesionInfo, TipoOperacion, UnidadMedida, UsuarioAdmin, UsuarioSesion, ZonaTipo,
 } from "@colbasoft/shared";
 
 export class ErrorApi extends Error {
-  constructor(public estado: number, mensaje: string, public codigo?: string) {
+  constructor(public estado: number, mensaje: string, public codigo?: string, public cuerpo?: Record<string, unknown>) {
     super(mensaje);
   }
 }
@@ -14,10 +14,11 @@ let alActividad: (() => void) | null = null;
 export const suscribirActividad = (f: () => void) => { alActividad = f; };
 
 async function pedir<T>(ruta: string, init?: RequestInit, pasivo = false): Promise<T> {
-  const r = await fetch(ruta, { credentials: "same-origin", headers: { "Content-Type": "application/json" }, ...init });
+  // El servidor rechaza (400) un cuerpo JSON vacío: la cabecera solo se envía cuando hay cuerpo (logout, renovar, desactivar… no lo llevan).
+  const r = await fetch(ruta, { credentials: "same-origin", ...init, headers: init?.body !== undefined ? { "Content-Type": "application/json" } : {} });
   if (!r.ok) {
     const c = (await r.json().catch(() => ({}))) as { error?: string; codigo?: string };
-    throw new ErrorApi(r.status, c.error ?? "Error inesperado.", c.codigo);
+    throw new ErrorApi(r.status, c.error ?? "Error inesperado.", c.codigo, c);
   }
   if (!pasivo) alActividad?.();
   return r.json() as Promise<T>;
@@ -71,6 +72,18 @@ export const api = {
     if (r.status === 404 || r.status === 409) return { ok: false, mensaje: c.error ?? "No se pudo resolver el código.", ofrecerNovedad: c.ofrecerNovedad === true, anulado: c.estado === "ANULADO" };
     throw new ErrorApi(r.status, c.error ?? "Error inesperado.");
   },
+  // entradas, piezas y ubicación (C1-3)
+  entradas: (estado?: string) => pedir<DocumentoEntradaResumen[]>(`/api/entradas${estado ? `?estado=${estado}` : ""}`),
+  entrada: (id: string) => pedir<DocumentoEntradaVista>(`/api/entradas/${id}`),
+  crearEntrada: (d: { bodegaId: string; origen: string; fechaEsperada: string; lineas: Array<{ skuId: string; cantidad: number }>; confirmarDuplicado?: boolean }) => pedir<DocumentoEntradaVista>("/api/entradas", cuerpo(d)),
+  registrarPieza: (id: string, d: { lineaId: string; tipo: TipoPieza; cantidad: number }) => pedir<DocumentoEntradaVista>(`/api/entradas/${id}/piezas`, cuerpo(d)),
+  cerrarRecepcion: (id: string) => pedir<DocumentoEntradaVista>(`/api/entradas/${id}/cerrar-recepcion`, { method: "POST" }),
+  autorizarSobrante: (id: string) => pedir<DocumentoEntradaVista>(`/api/entradas/${id}/autorizar-sobrante`, { method: "POST" }),
+  confirmarEntrada: (id: string, lotes: Array<{ lineaId: string; loteId?: string; codigo?: string; origen?: string }>) => pedir<DocumentoEntradaVista>(`/api/entradas/${id}/confirmar`, cuerpo({ lotes })),
+  propuesta: (piezaId: string) => pedir<PropuestaUbicacion>(`/api/entradas/piezas/${piezaId}/propuesta`),
+  ubicarPieza: (piezaId: string, d: { destinoCodigo?: string; destinoId?: string; mercanciaCodigo?: string }) => pedir<{ movimientoId: string; desviacion: boolean; destino: string; estado: EstadoExistencia; modo: ModoIdentificacion }>(`/api/entradas/piezas/${piezaId}/ubicar`, cuerpo(d)),
+  desviaciones: () => pedir<DesviacionVista[]>("/api/entradas/desviaciones"),
+  zonaCategoria: (zonaId: string, categoriaId: string | null) => pedir<{ ok: boolean }>(`/api/bodega/zonas/${zonaId}/categoria`, enviar("PATCH", { categoriaId })),
   // parámetros y motivos
   parametros: () => pedir<ParametroVista[]>("/api/parametros"),
   guardarParametro: (clave: string, valor: number) => pedir<{ clave: string; anterior: number; nuevo: number }>(`/api/parametros/${clave}`, enviar("PUT", { valor })),

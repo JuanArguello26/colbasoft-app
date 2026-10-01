@@ -97,6 +97,9 @@ export interface ZonaVista {
   codigo: string;
   nombre: string;
   tipo: ZonaTipo;
+  /** Categoría que esta zona recibe en la propuesta de ubicación (RN-MOV-001). */
+  categoriaId: string | null;
+  categoria: string | null;
   ubicaciones: UbicacionVista[];
 }
 
@@ -159,9 +162,12 @@ export interface EtiquetaVista {
   ubicacion?: { bodega: string; zona: string; codigo: string };
 }
 
+export type EstadoExistencia = "EN_RECEPCION" | "DISPONIBLE";
+
 export interface ExistenciaEnUbicacion {
   ubicacionId: string;
   ubicacion: string;
+  estado: EstadoExistencia;
   cantidad: number;
 }
 
@@ -180,3 +186,87 @@ export type ResolucionVista =
       identificador: { codigo: string; estado: IdentificadorEstado };
       ubicacion: { id: string; codigo: string; zona: string; bodega: string; activa: boolean };
     };
+
+// ---- Entradas, piezas y ubicación (bloque C1-3) ----
+
+export const ESTADOS_DOCUMENTO_ENTRADA = ["PENDIENTE_RECEPCION", "RECEPCION_PARCIAL", "RECIBIDO_CONFORME", "RECIBIDO_CON_NOVEDAD", "CONFIRMADO"] as const;
+export type EstadoDocumentoEntrada = (typeof ESTADOS_DOCUMENTO_ENTRADA)[number];
+
+export const TIPOS_PIEZA = ["ROLLO", "PAQUETE", "BOLSA"] as const;
+export type TipoPieza = (typeof TIPOS_PIEZA)[number];
+
+/** F-1: el rollo es la pieza de las referencias en metros, kilogramos o rollos; paquete o bolsa, la de las referencias en unidades. */
+export const TIPOS_PIEZA_POR_UNIDAD: Record<UnidadMedida, readonly TipoPieza[]> = {
+  UNIDADES: ["PAQUETE", "BOLSA"],
+  METROS: ["ROLLO"],
+  KILOGRAMOS: ["ROLLO"],
+  ROLLOS: ["ROLLO"],
+};
+
+/** Resultado de comparar lo recibido con lo esperado en una línea (RN-ENT-003). */
+export type ResultadoLinea = "SIN_RECIBIR" | "EN_CURSO" | "CONFORME" | "FALTANTE" | "SOBRANTE";
+
+export interface PiezaVista {
+  id: string;
+  numero: number;
+  tipo: TipoPieza;
+  /** Cantidad con la que se recibió. */
+  cantidad: number;
+  registradaPor: string;
+  registradaEn: string;
+  /** Dónde está hoy, derivado del kardex. */
+  ubicaciones: ExistenciaEnUbicacion[];
+}
+
+export interface LineaEntradaVista {
+  id: string;
+  sku: SkuVista;
+  cantidadEsperada: number;
+  /** Suma de las cantidades de sus piezas (RN-LOT-007). */
+  cantidadRecibida: number;
+  diferencia: number | null;
+  resultado: ResultadoLinea;
+  lote: { id: string; codigo: string } | null;
+  piezas: PiezaVista[];
+}
+
+export interface DocumentoEntradaResumen {
+  id: string;
+  numero: number;
+  origen: string;
+  fechaEsperada: string;
+  estado: EstadoDocumentoEntrada;
+  bodega: string;
+  lineas: number;
+  creadoEn: string;
+  tieneFaltante: boolean;
+  tieneSobrante: boolean;
+}
+
+export interface DocumentoEntradaVista extends DocumentoEntradaResumen {
+  bodegaId: string;
+  creadoPor: string;
+  llegadaEn: string | null;
+  receptores: string[];
+  sobranteAutorizado: { por: string; en: string } | null;
+  confirmado: { por: string; en: string } | null;
+  ubicacionRecepcion: string | null;
+  detalle: LineaEntradaVista[];
+}
+
+export interface PropuestaUbicacion {
+  ubicacion: { id: string; codigo: string; zona: string; bodega: string };
+  criterio: "AGRUPACION_POR_REFERENCIA" | "ZONA_POR_CATEGORIA" | "RECEPCION";
+  explicacion: string;
+}
+
+/** RN-MOV-003: desviación entre la ubicación propuesta y la confirmada; información operativa, no falta imputable. */
+export interface DesviacionVista {
+  movimientoId: string;
+  instante: string;
+  usuario: string;
+  documento: number;
+  pieza: number;
+  propuesta: string | null;
+  elegida: string;
+}

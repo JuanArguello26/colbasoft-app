@@ -74,11 +74,16 @@ export async function cargarExcel(ruta: string): Promise<Resumen> {
   const zonasHoja = leerHoja(libro, "zonas");
   for (const z of zonasHoja) {
     const bodega = await prisma.bodega.findUniqueOrThrow({ where: { codigo: z.bodega } });
-    await prisma.zona.upsert({
+    const zona = await prisma.zona.upsert({
       where: { bodegaId_codigo: { bodegaId: bodega.id, codigo: z.codigo } },
       update: { nombre: z.nombre },
       create: { bodegaId: bodega.id, codigo: z.codigo, nombre: z.nombre, tipo: z.tipo as never },
     });
+    // La categoría de la zona solo se completa si está vacía: lo que el Administrador haya configurado no se pisa al volver a cargar.
+    if (z.categoria) {
+      const categoria = await prisma.categoria.findUniqueOrThrow({ where: { nombre: z.categoria } });
+      await prisma.zona.updateMany({ where: { id: zona.id, categoriaId: null }, data: { categoriaId: categoria.id } });
+    }
   }
 
   const ubicacionesHoja = leerHoja(libro, "ubicaciones");
