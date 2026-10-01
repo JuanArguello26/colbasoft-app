@@ -71,12 +71,28 @@ enum TipoMovimiento {
   MOVIMIENTO_INTERNO
   /// Movimiento inverso que neutraliza otro (CD-34, RF-KDX-004); no borra el original.
   ANULACION
+  /// Al autorizar una salida la existencia comprometida pasa de disponible a reservada (RN-EXI-004).
+  RESERVA
+  /// Lo que sale de la bodega: descuenta la existencia reservada (RF-SAL-009).
+  SALIDA
+  /// La reserva vuelve a disponible al cancelarse la salida, vencer su plazo o no tomarse todo (RN-SAL-005).
+  LIBERACION
+}
+
+/// Ciclo de una salida: solicitada → autorizada (existencia reservada) → confirmada; o cancelada, o vencida (reserva liberada).
+enum EstadoSalida {
+  SOLICITADA
+  AUTORIZADA
+  CONFIRMADA
+  CANCELADA
+  VENCIDA
 }
 
 /// SM-06 (porción de existencia). Reservado, en tránsito e inmovilizado llegan con sus bloques.
 enum EstadoExistencia {
   EN_RECEPCION
   DISPONIBLE
+  RESERVADO
 }
 
 /// RF-QRC-009 / VO-40: cómo se identificó la mercancía o la ubicación en un movimiento.
@@ -124,6 +140,7 @@ model Motivo {
   exigeEvidencia Boolean       @default(false)
   activo         Boolean       @default(true)
   movimientos    Movimiento[]
+  salidas        Salida[]
 
   @@unique([tipoOperacion, nombre])
 }
@@ -195,6 +212,7 @@ model Sku {
 
   lotes         Lote[]
   lineasEntrada LineaEntrada[]
+  lineasSalida  LineaSalida[]
 
   @@unique([referenciaId, tallaId, colorId])
 }
@@ -210,6 +228,7 @@ model Lote {
   fechaIngreso  DateTime       @default(now())
   identificador Identificador?
   lineasEntrada LineaEntrada[]
+  lineasSalida  LineaSalida[]
 
   @@unique([skuId, codigo])
 }
@@ -238,6 +257,7 @@ model Bodega {
   zonas       Zona[]
   ubicaciones Ubicacion[]
   entradas    DocumentoEntrada[]
+  salidas     Salida[]
 }
 
 model Zona {
@@ -269,6 +289,7 @@ model Ubicacion {
   unidadCapacidad UnidadMedida?
   identificador   Identificador?
   asientos        AsientoKardex[]
+  reservas        ReservaSalida[]
 
   @@unique([bodegaId, codigo])
 }
@@ -330,6 +351,7 @@ model Pieza {
   registradaPorId String
   registradaEn    DateTime        @default(now())
   asientos        AsientoKardex[]
+  reservas        ReservaSalida[]
 
   @@index([lineaId])
 }
@@ -354,10 +376,13 @@ model Movimiento {
   desviacion           Boolean             @default(false)
   /// Solo en una ANULACION: el movimiento que neutraliza (uno solo puede anularse una vez) y el motivo tipificado (RF-KDX-004).
   anulaAId             String?             @unique
-  anulaA               Movimiento?         @relation("Anulacion", fields: [anulaAId], references: [id])
+  anulaA               Movimiento?         @relation("Anulacion", fields: [anulaAId], references: [id], onDelete: Restrict)
   anuladoPor           Movimiento?         @relation("Anulacion")
   motivoId             String?
-  motivo               Motivo?             @relation(fields: [motivoId], references: [id])
+  motivo               Motivo?             @relation(fields: [motivoId], references: [id], onDelete: Restrict)
+  /// Solo en reserva, salida y liberación: la salida que los origina.
+  salidaId             String?
+  salida               Salida?             @relation(fields: [salidaId], references: [id], onDelete: Restrict)
   asientos             AsientoKardex[]
 
   @@index([documentoEntradaId])
@@ -380,4 +405,75 @@ model AsientoKardex {
   @@index([piezaId, ubicacionId, estado])
   @@index([ubicacionId])
   @@index([movimientoId])
+}
+
+/// E-14 (CD-19/20). Una salida es solo el motivo y lo que sale: no hay cliente, precio, factura ni documento comercial (RN-SAL-002, DC-03).
+model Salida {
+  id                 String       @id @default(uuid())
+  numero             Int          @unique @default(autoincrement())
+  bodegaId           String
+  bodega             Bodega       @relation(fields: [bodegaId], references: [id])
+  motivoId           String
+  motivo             Motivo       @relation(fields: [motivoId], references: [id])
+  observacion        String?
+  estado             EstadoSalida @default(SOLICITADA)
+  /// Salida parcial: la cantidad pedida superaba lo disponible y se aceptó sacar solo lo disponible (RN-SAL-009, HU-SAL-004).
+  parcial            Boolean      @default(false)
+  solicitadaPorId    String
+  solicitadaPorLogin String
+  solicitadaEn       DateTime     @default(now())
+  autorizadaPorId    String?
+  autorizadaPorLogin String?
+  autorizadaEn       DateTime?
+  /// Fin del plazo de la reserva (RN-SAL-005).
+  venceEn            DateTime?
+  confirmadaPorLogin String?
+  confirmadaEn       DateTime?
+  canceladaPorLogin  String?
+  canceladaEn        DateTime?
+  lineas             LineaSalida[]
+  movimientos        Movimiento[]
+
+  @@index([estado])
+}
+
+model LineaSalida {
+  id             String          @id @default(uuid())
+  salidaId       String
+  salida         Salida          @relation(fields: [salidaId], references: [id])
+  skuId          String
+  sku            Sku             @relation(fields: [skuId], references: [id])
+  /// Sin lote, la toma sigue la política configurada (RN-SAL-003).
+  loteId         String?
+  lote           Lote?           @relation(fields: [loteId], references: [id], onDelete: Restrict)
+  /// Lo que sale; en una salida parcial es lo disponible, no lo pedido.
+  cantidad       Decimal         @db.Decimal(14, 3)
+  cantidadPedida Decimal         @db.Decimal(14, 3)
+  reservas       ReservaSalida[]
+}
+
+/// Qué parte de qué pieza, y de qué ubicación, quedó reservada para una línea. La existencia reservada vive en el kardex (estado RESERVADO).
+model ReservaSalida {
+  id          String       @id @default(uuid())
+  lineaId     String
+  linea       LineaSalida  @relation(fields: [lineaId], references: [id])
+  piezaId     String
+  pieza       Pieza        @relation(fields: [piezaId], references: [id])
+  ubicacionId String
+  ubicacion   Ubicacion    @relation(fields: [ubicacionId], references: [id])
+  cantidad    Decimal      @db.Decimal(14, 3)
+  toma        TomaSalida?
+
+  @@index([lineaId])
+}
+
+/// RN-SAL-009: cada pieza se cuenta una sola vez. La unicidad de `reservaId` impide que seleccionar de nuevo la misma pieza sume.
+model TomaSalida {
+  id             String        @id @default(uuid())
+  reservaId      String        @unique
+  reserva        ReservaSalida @relation(fields: [reservaId], references: [id])
+  cantidad       Decimal       @db.Decimal(14, 3)
+  tomadaPorId    String
+  tomadaPorLogin String
+  tomadaEn       DateTime      @default(now())
 }

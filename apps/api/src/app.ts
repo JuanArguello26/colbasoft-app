@@ -16,6 +16,7 @@ import { rutasLotes } from "./routes/lotes.js";
 import { rutasMovimientos } from "./routes/movimientos.js";
 import { rutasMotivos } from "./routes/motivos.js";
 import { rutasParametros } from "./routes/parametros.js";
+import { rutasSalidas } from "./routes/salidas.js";
 import { rutasSalud } from "./routes/salud.js";
 import { rutasUsuarios } from "./routes/usuarios.js";
 
@@ -96,6 +97,7 @@ export async function construirApp(opciones: OpcionesApp): Promise<FastifyInstan
   await app.register(rutasEntradas, { prefix: "/api/entradas" });
   await app.register(rutasInventario, { prefix: "/api/inventario" });
   await app.register(rutasMovimientos, { prefix: "/api/movimientos" });
+  await app.register(rutasSalidas, { prefix: "/api/salidas" });
   await app.register(rutasParametros, { prefix: "/api/parametros" });
   await app.register(rutasMotivos, { prefix: "/api/motivos" });
   await app.register(rutasBitacora, { prefix: "/api/bitacora" });

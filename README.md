@@ -2,7 +2,7 @@
 
 Plataforma de trazabilidad de inventarios para PYMES textiles (proyecto de grado). Este repositorio contiene **el código**; los documentos (SPEC, SRS, dominio, arquitectura) están en el repositorio `colbasoft-docs`.
 
-> **Estado:** corte de entrega **C1** (SPEC v1.5 §12.7). **Bloques C1-1 (Fundación), C1-2 (Identificación y lotes), C1-3 (Entradas, piezas y ubicación), C1-4 (Kardex y consulta de existencia) y C1-5 (Movimientos internos) completos**; sigue C1-6 (salidas y corte parcial).
+> **Estado:** corte de entrega **C1** (SPEC v1.5 §12.7). **Bloques C1-1 (Fundación), C1-2 (Identificación y lotes), C1-3 (Entradas, piezas y ubicación), C1-4 (Kardex y consulta de existencia) C1-5 (Movimientos internos) y C1-6 (Salidas y corte parcial) completos: **el corte C1 está construido** (35 de 35 historias); quedan la revisión de las decisiones de interpretación y las pruebas finales.
 > **Datos:** el proyecto se valida **solo con datos ficticios** (SPEC §12.8). El Excel es **únicamente una carga de datos de prueba**; la base de datos es PostgreSQL.
 
 ## Pila (ADR-001)
@@ -105,6 +105,19 @@ Una migración (`c1_4_kardex_anulacion`) añade el tipo `ANULACION` y las column
 
 Un movimiento interno es un solo movimiento con dos asientos (−origen, +destino) en una transacción. Dos movimientos simultáneos de la misma pieza: solo uno se aplica (el candado de la base de datos rechaza el segundo y se explica). Un movimiento interno se corrige con una anulación (C1-4).
 
+## Estado del bloque C1-6 (Salidas y corte parcial)
+
+| Historia | Qué hay |
+|---|---|
+| HU-SAL-001 | Solicitar una salida con motivo tipificado de la lista de salidas (nunca cliente, precio ni factura), con referencias, tallas, colores, lotes y cantidades; verifica la existencia disponible antes de aceptar |
+| HU-SAL-004 | Nada que deje la existencia negativa (también en la base); si lo disponible no alcanza, rechaza, informa cuánto hay, deja el rechazo en la bitácora y ofrece una salida parcial por lo disponible, que autoriza el Jefe |
+| HU-SAL-002 | Al autorizar (Jefe o Administrador) la cantidad pasa a **reservada** en el kardex y deja de contar como disponible; otra salida o un movimiento sobre esa pieza se rechaza; la reserva se libera al cancelar o al vencer su plazo (parámetro `plazo_reserva_horas`) |
+| HU-SAL-003 | Indica de qué ubicación y qué piezas tomar según la política configurada (`politica_toma`: 1 = primero en entrar primero en salir por lote; 2 = ubicación de mayor cantidad); el escaneo que no corresponde se rechaza diciendo si difiere la referencia, la talla, el color o el lote; el progreso se ve; confirma al completar |
+| HU-SAL-008 | El escaneo verifica y cuenta: cada pieza se cuenta una sola vez (seleccionarla de nuevo no suma); no se confirma completa si falta, salvo salida parcial autorizada; cada pieza tomada queda en el kardex |
+| HU-SAL-009 | Corte parcial: se toma solo una parte de una pieza, que conserva su identidad y su remanente, sin superar lo que tiene ni lo reservado; queda como salida con motivo, autorización y atribución, y el remanente se ve de inmediato |
+
+Reservar, sacar y liberar son movimientos del kardex (`RESERVA`, `SALIDA`, `LIBERACION`) con el estado de existencia `RESERVADO`; las tablas `Salida`, `LineaSalida`, `ReservaSalida` y `TomaSalida` solo guardan el plan y lo tomado. Una restricción de la base (`Movimiento_origen_coherente`) obliga a que cada salida lleve su motivo y cada reserva, salida y liberación su documento.
+
 ## Provisional o pendiente
 
 - **Parámetros y rangos:** son valores **de demostración**; el SPEC no fija cifras (se calibran con datos reales).
@@ -137,6 +150,16 @@ Un movimiento interno es un solo movimiento con dos asientos (−origen, +destin
   - **No hay propuesta ni desviación** en el movimiento interno: RN-MOV-001/003 solo se definen para la primera ubicación.
   - **La cantidad es opcional en la API:** si se envía, debe ser la de la pieza completa; más es «más de lo existente» (RN-EXI-003) y menos es un corte parcial, que se registra como salida (RN-MOV-012, C1-6).
   - **Permisos:** Administrador, Jefe, Coordinador y Auxiliar pueden mover; el Auditor no. La matriz del SRS solo nombra al Auxiliar para esta historia.
+- **Decisiones de interpretación del bloque C1-6** (revisar con el Director):
+  - **Solo el Jefe y el Administrador autorizan.** El umbral de autorización del Coordinador (RF-SAL-006, HU-SAL-007) está fuera del corte C1: toda salida espera al Jefe.
+  - **La reserva se asigna por pieza al autorizar**, con la política de toma (RN-SAL-003); puede reservar solo una parte de una pieza (corte parcial). La política «ubicación más próxima» no existe: el sistema no modela distancias. El parámetro `politica_toma` (1 o 2) lo añadió este bloque; el SRS no fija sus valores.
+  - **Salida parcial:** se pide con una confirmación explícita («aceptar parcial»); el sistema reduce cada línea a lo disponible y marca la salida. Esa marca es lo que permite confirmarla incompleta (RN-SAL-009: «salvo salida parcial autorizada»). Lo reservado y no tomado vuelve a disponible.
+  - **Un corte menor que lo reservado** se permite al preparar, pero deja la salida incompleta (no se confirma sin parcial). Lo que supera la pieza o lo reservado se rechaza.
+  - **Una pieza reservada, en todo o en parte, no se mueve** hasta que la salida se confirme o se cancele (moverla sería dividirla, RN-MOV-012).
+  - **Las reservas y salidas no se anulan:** se cancelan mientras estén autorizadas; lo que ya salió solo vuelve como entrada nueva (RN-SAL-007, HU-SAL-006, fuera del corte).
+  - **Vencimiento:** la liberación se hace al consultar u operar y con un temporizador del servidor cada minuto. La **alerta al solicitante** (RF-SAL-014) necesita el módulo de alertas, fuera del corte: hoy queda en la bitácora y la salida figura «vencida». El movimiento de liberación se atribuye a «sistema».
+  - **Motivos que exigen evidencia** (p. ej. baja por daño): se exige una observación; adjuntar evidencia y la aprobación específica del Jefe (HU-SAL-005, RN-SAL-006) quedan fuera del corte.
+  - **El Auxiliar prepara y confirma;** también pueden hacerlo los demás roles, excepto el Auditor.
 - **Lectura con cámara:** usa `getUserMedia` y `jsqr`; exige HTTPS o `localhost`, y no se ha probado con una cámara real (solo la ruta de digitación manual y que el QR generado se decodifique de vuelta).
 - Retención local y sincronización sin conectividad: fuera del corte C1.
 

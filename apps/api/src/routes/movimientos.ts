@@ -104,6 +104,8 @@ export const rutasMovimientos: FastifyPluginAsync = async (app) => {
       const origenIndicado = d.data.origenCodigo ? await ubicacionDeCodigo(tx, d.data.origenCodigo) : d.data.origenId;
       const aqui = origenIndicado ? donde.filter((x) => x.ubicacionId === origenIndicado) : donde;
       if (aqui.length === 0) throw new ErrorHttp(409, donde.length === 0 ? "Esta pieza no tiene existencia: no hay nada que mover." : "El sistema no registra esa pieza en la ubicación de origen indicada.");
+      // Una pieza reservada en parte para una salida no se mueve: moverla sería dividirla (RN-MOV-012).
+      if (aqui.some((x) => x.estado === "RESERVADO")) throw new ErrorHttp(409, "La pieza está reservada, en todo o en parte, para una salida: no se puede mover hasta que la salida se confirme o se cancele.");
       const origen = aqui.find((x) => x.estado === "DISPONIBLE");
       if (!origen) {
         const estado: EstadoExistencia = aqui[0]!.estado;

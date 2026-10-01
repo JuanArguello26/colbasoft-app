@@ -25,6 +25,7 @@ export const DEFINICIONES: DefinicionParametro[] = [
   { clave: "tolerancia_conteo_pct", descripcion: "Tolerancia de diferencia de conteo antes del segundo conteo", unidad: "%", porDefecto: 2, minimo: 0, maximo: 100 },
   { clave: "tiempo_transito_max_horas", descripcion: "Tiempo máximo en tránsito antes de alertar", unidad: "horas", porDefecto: 24, minimo: 1, maximo: 720 },
   { clave: "plazo_reserva_horas", descripcion: "Plazo para ejecutar una salida autorizada antes de liberar su reserva", unidad: "horas", porDefecto: 48, minimo: 1, maximo: 720 },
+  { clave: "politica_toma", descripcion: "Política de toma para una salida: 1 = primero en entrar, primero en salir por lote; 2 = ubicación de mayor cantidad", unidad: "opción", porDefecto: 1, minimo: 1, maximo: 2, entero: true },
   { clave: "plazo_novedad_horas", descripcion: "Plazo para resolver una novedad antes de escalarla al Jefe", unidad: "horas", porDefecto: 72, minimo: 1, maximo: 720 },
   { clave: "umbral_autorizacion_coordinador", descripcion: "Cantidad hasta la que el Coordinador autoriza una salida", unidad: "unidades", porDefecto: 100, minimo: 1, maximo: 1_000_000 },
   { clave: "umbral_critico_conteo_general_pct", descripcion: "Diferencia global crítica de un conteo general", unidad: "%", porDefecto: 5, minimo: 0, maximo: 100 },

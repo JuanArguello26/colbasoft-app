@@ -1,5 +1,5 @@
 import type {
-  BodegaVista, DesviacionVista, MovimientoInternoResultado, PiezasMovibles, ExistenciaReferencia, KardexVista, PiezasDeLoteVista, UbicacionDeReferencia, DocumentoEntradaResumen, DocumentoEntradaVista, EstadoExistencia, EtiquetaVista, PropuestaUbicacion, TipoPieza, IdentificadorResumen, LoteVista, ModoIdentificacion, ResolucionVista, SkuVista, MotivoVista, ParametroVista, ReferenciaDetalle, ReferenciaResumen, RegistroBitacoraVista,
+  BodegaVista, DesviacionVista, SalidaResumen, SalidaVista, TomaResultado, MovimientoInternoResultado, PiezasMovibles, ExistenciaReferencia, KardexVista, PiezasDeLoteVista, UbicacionDeReferencia, DocumentoEntradaResumen, DocumentoEntradaVista, EstadoExistencia, EtiquetaVista, PropuestaUbicacion, TipoPieza, IdentificadorResumen, LoteVista, ModoIdentificacion, ResolucionVista, SkuVista, MotivoVista, ParametroVista, ReferenciaDetalle, ReferenciaResumen, RegistroBitacoraVista,
   Rol, SesionInfo, TipoOperacion, UnidadMedida, UsuarioAdmin, UsuarioSesion, ZonaTipo,
 } from "@colbasoft/shared";
 
@@ -94,6 +94,14 @@ export const api = {
   // movimientos internos (C1-5)
   piezasMovibles: (q: Record<string, string>) => pedir<PiezasMovibles>(`/api/movimientos/piezas?${new URLSearchParams(q)}`, undefined, true),
   moverPieza: (d: { piezaId: string; destinoCodigo?: string; destinoId?: string; origenCodigo?: string; origenId?: string; mercanciaCodigo?: string }) => pedir<MovimientoInternoResultado>("/api/movimientos/internos", cuerpo(d)),
+  // salidas (C1-6)
+  salidas: (estado = "") => pedir<SalidaResumen[]>(`/api/salidas${estado ? `?estado=${estado}` : ""}`),
+  salida: (id: string) => pedir<SalidaVista>(`/api/salidas/${id}`),
+  crearSalida: (d: { motivoId: string; observacion?: string; aceptarParcial?: boolean; lineas: Array<{ skuId: string; loteId?: string; cantidad: number }> }) => pedir<SalidaVista>("/api/salidas", cuerpo(d)),
+  autorizarSalida: (id: string) => pedir<SalidaVista>(`/api/salidas/${id}/autorizar`, { method: "POST" }),
+  cancelarSalida: (id: string) => pedir<SalidaVista>(`/api/salidas/${id}/cancelar`, { method: "POST" }),
+  tomarSalida: (id: string, d: { mercanciaCodigo: string; piezaId: string; cantidad?: number }) => pedir<TomaResultado>(`/api/salidas/${id}/tomar`, cuerpo(d)),
+  confirmarSalida: (id: string) => pedir<SalidaVista>(`/api/salidas/${id}/confirmar`, { method: "POST" }),
   // parámetros y motivos
   parametros: () => pedir<ParametroVista[]>("/api/parametros"),
   guardarParametro: (clave: string, valor: number) => pedir<{ clave: string; anterior: number; nuevo: number }>(`/api/parametros/${clave}`, enviar("PUT", { valor })),

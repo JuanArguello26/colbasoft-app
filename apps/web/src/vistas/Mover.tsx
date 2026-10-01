@@ -71,8 +71,8 @@ export function Mover() {
                 {lote.piezas.map((p) => (
                   <tr key={p.id + p.ubicacionId + p.estado} className={piezaId === p.id ? "fila-activa" : ""}>
                     <td>{PZ(p.numero)}</td><td>{p.tipo.toLowerCase()}</td><td>{p.cantidad}</td>
-                    <td>{p.ubicacion} <Insignia tono={p.movible ? "ok" : "info"}>{p.estado === "DISPONIBLE" ? "disponible" : "en recepción"}</Insignia></td>
-                    <td className="acciones">{p.movible ? <button className="secundario" onClick={() => { setPiezaId(p.id); setOk(""); }}>{piezaId === p.id ? "Elegida" : "Elegir"}</button> : <span className="nota">Se ubica desde la entrada</span>}</td>
+                    <td>{p.ubicacion} <Insignia tono={p.movible ? "ok" : "info"}>{p.estado === "DISPONIBLE" ? "disponible" : p.estado === "RESERVADO" ? "reservada" : "en recepción"}</Insignia></td>
+                    <td className="acciones">{p.movible ? <button className="secundario" onClick={() => { setPiezaId(p.id); setOk(""); }}>{piezaId === p.id ? "Elegida" : "Elegir"}</button> : <span className="nota">{p.estado === "RESERVADO" ? "Reservada para una salida" : "Se ubica desde la entrada"}</span>}</td>
                   </tr>
                 ))}
               </tbody>

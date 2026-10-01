@@ -12,15 +12,17 @@ import { Kardex } from "./vistas/Kardex";
 import { Mover } from "./vistas/Mover";
 import { Identificacion } from "./vistas/Identificacion";
 import { Motivos } from "./vistas/Motivos";
+import { Salidas } from "./vistas/Salidas";
 import { Parametros } from "./vistas/Parametros";
 import { Usuarios } from "./vistas/Usuarios";
 
-type Vista = "catalogo" | "entradas" | "mover" | "existencia" | "kardex" | "identificacion" | "escanear" | "bodega" | "motivos" | "usuarios" | "parametros" | "bitacora";
+type Vista = "catalogo" | "entradas" | "salidas" | "mover" | "existencia" | "kardex" | "identificacion" | "escanear" | "bodega" | "motivos" | "usuarios" | "parametros" | "bitacora";
 
 interface Pestana { id: Vista; titulo: string; roles: Rol[] | "todos" }
 const PESTANAS: Pestana[] = [
   { id: "catalogo", titulo: "Catálogo", roles: "todos" },
   { id: "entradas", titulo: "Entradas", roles: "todos" },
+  { id: "salidas", titulo: "Salidas", roles: "todos" },
   { id: "mover", titulo: "Mover", roles: ["ADMINISTRADOR", "JEFE_BODEGA", "COORDINADOR_BODEGA", "AUXILIAR_BODEGA"] },
   { id: "existencia", titulo: "Existencia", roles: "todos" },
   { id: "kardex", titulo: "Kardex", roles: "todos" },
@@ -164,6 +166,7 @@ function Shell({ sesion, refrescar, alSalir }: { sesion: SesionInfo; refrescar: 
             verDesviaciones: rol === "ADMINISTRADOR" || rol === "JEFE_BODEGA" || rol === "COORDINADOR_BODEGA",
           }} />
         )}
+        {vista === "salidas" && <Salidas usuario={sesion.login} permisos={{ solicitar: rol === "ADMINISTRADOR" || rol === "JEFE_BODEGA" || rol === "COORDINADOR_BODEGA", autorizar: rol === "ADMINISTRADOR" || rol === "JEFE_BODEGA", operar: rol !== "AUDITOR" }} />}
         {vista === "mover" && <Mover />}
         {vista === "existencia" && <Existencia alVerKardex={(id) => { setLoteKardex(id); setVista("kardex"); }} />}
         {vista === "kardex" && <Kardex loteInicial={loteKardex} puedeAnular={rol === "ADMINISTRADOR" || rol === "JEFE_BODEGA"} esAuxiliar={rol === "AUXILIAR_BODEGA"} />}

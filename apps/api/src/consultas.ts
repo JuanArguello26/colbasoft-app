@@ -167,17 +167,18 @@ export async function consultarKardex(f: FiltroKardex): Promise<KardexVista> {
   if (f.desde) fuera.agregar((m) => `x."confirmadoEn" >= ${m}`, f.desde);
   const filas = await prisma.$queryRawUnsafe<Array<FilaSku & {
     movimientoId: string; secuencia: number; confirmadoEn: Date; tipo: TipoMovimientoVista; delta: number; existencia: number; estado: EstadoDesglose;
-    ubicacion: string; pieza: number; lote: string; usuarioLogin: string; documento: number | null; motivo: string | null; anulaA: number | null; anuladoPor: number | null;
+    ubicacion: string; pieza: number; lote: string; usuarioLogin: string; documento: number | null; salida: number | null; motivo: string | null; anulaA: number | null; anuladoPor: number | null;
   }>>(
     `SELECT * FROM (
        SELECT m.id AS "movimientoId", m.secuencia, m."confirmadoEn", m.tipo::text AS tipo, m."usuarioId", m."usuarioLogin", de.numero AS documento, mo.nombre AS motivo,
               ma.secuencia AS "anulaA", mx.secuencia AS "anuladoPor", a.id AS "asientoId", a.delta::float8 AS delta, a.estado::text AS estado, p.numero AS pieza,
               r.id AS "referenciaId", r.codigo, r.descripcion, r."unidadMedida"::text AS "unidadMedida", s.id AS "skuId", t.nombre AS talla, c.nombre AS color,
-              lo.codigo AS lote, u.codigo AS ubicacion,
+              lo.codigo AS lote, u.codigo AS ubicacion, sa.numero AS salida,
               SUM(a.delta) OVER (ORDER BY m.secuencia, a.delta, a.id)::float8 AS existencia
        ${DESDE}
        JOIN "Movimiento" m ON m.id = a."movimientoId"
        LEFT JOIN "DocumentoEntrada" de ON de.id = m."documentoEntradaId"
+       LEFT JOIN "Salida" sa ON sa.id = m."salidaId"
        LEFT JOIN "Motivo" mo ON mo.id = m."motivoId"
        LEFT JOIN "Movimiento" ma ON ma.id = m."anulaAId"
        LEFT JOIN "Movimiento" mx ON mx."anulaAId" = m.id
@@ -196,7 +197,7 @@ export async function consultarKardex(f: FiltroKardex): Promise<KardexVista> {
     previo = x.existencia;
     return {
       movimientoId: x.movimientoId, secuencia: x.secuencia, instante: x.confirmadoEn.toISOString(), tipo: x.tipo, cantidad: x.delta, existenciaResultante: x.existencia,
-      estado: x.estado, ubicacion: x.ubicacion, pieza: x.pieza, sku: skuDe(x), lote: x.lote, usuario: x.usuarioLogin, documento: x.documento, motivo: x.motivo, anulaA: x.anulaA, anuladoPor: x.anuladoPor,
+      estado: x.estado, ubicacion: x.ubicacion, pieza: x.pieza, sku: skuDe(x), lote: x.lote, usuario: x.usuarioLogin, documento: x.documento, salida: x.salida, motivo: x.motivo, anulaA: x.anulaA, anuladoPor: x.anuladoPor,
     };
   });
   return { lineas, existenciaFinal: previo, continuidad: { ok: continuo, lineas: lineas.length }, truncado, restringido: Boolean(f.soloUsuarioId || f.desde) };

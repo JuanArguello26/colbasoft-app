@@ -110,6 +110,8 @@ export const rutasInventario: FastifyPluginAsync = async (app) => {
       const original = await tx.movimiento.findUnique({ where: { id: movimientoId }, include: { asientos: true, anuladoPor: { select: { secuencia: true } } } });
       if (!original) throw new ErrorHttp(404, "Movimiento no encontrado.");
       if (original.tipo === "ANULACION") throw new ErrorHttp(409, "Una anulación no se anula.");
+      // La reserva, la salida y la liberación se corrigen con su propio flujo (cancelar la salida; el retorno es una entrada nueva, RN-SAL-007), no con una anulación.
+      if (original.tipo === "RESERVA" || original.tipo === "SALIDA" || original.tipo === "LIBERACION") throw new ErrorHttp(409, "Las reservas y las salidas no se anulan: cancele la salida mientras esté autorizada. Lo que ya salió solo vuelve como una entrada nueva.");
       if (original.anuladoPor) throw new ErrorHttp(409, `El movimiento ya fue anulado por el movimiento ${original.anuladoPor.secuencia}.`);
       const motivo = await tx.motivo.findUnique({ where: { id: d.data.motivoId } });
       if (!motivo || motivo.tipoOperacion !== "ANULACION") throw new ErrorHttp(422, "Elija un motivo de anulación de la lista.");

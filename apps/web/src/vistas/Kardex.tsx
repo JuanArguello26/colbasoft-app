@@ -4,7 +4,7 @@ import { api } from "../api";
 import { Aviso, Campo, Insignia, Modal, fechaHora } from "../ui";
 import { NOMBRE_ESTADO } from "./Existencia";
 
-const NOMBRE_TIPO = { ENTRADA: "Entrada", MOVIMIENTO_INTERNO: "Movimiento interno", ANULACION: "Anulación" } as const;
+const NOMBRE_TIPO = { ENTRADA: "Entrada", MOVIMIENTO_INTERNO: "Movimiento interno", ANULACION: "Anulación", RESERVA: "Reserva", SALIDA: "Salida", LIBERACION: "Liberación de reserva" } as const;
 
 /**
  * Kardex y trazabilidad (HU-KDX-001, HU-KDX-002, HU-KDX-006): las piezas de un lote y la historia de un lote o de una pieza.
@@ -93,8 +93,8 @@ export function Kardex({ loteInicial, puedeAnular, esAuxiliar }: { loteInicial: 
                     <td>{l.secuencia}</td><td>{fechaHora(l.instante)}</td>
                     <td>{NOMBRE_TIPO[l.tipo]}{l.anulaA !== null && <small> de #{l.anulaA}</small>}{l.anuladoPor !== null && <> <Insignia tono="alerta">anulado por #{l.anuladoPor}</Insignia></>}</td>
                     <td>{l.cantidad > 0 ? `+${l.cantidad}` : l.cantidad}</td><td><strong>{l.existenciaResultante}</strong></td>
-                    <td>P-{String(l.pieza).padStart(6, "0")}</td><td>{l.ubicacion}</td><td>{NOMBRE_ESTADO[l.estado]}</td><td>{l.usuario}</td><td>{l.documento ?? "—"}</td><td>{l.motivo ?? "—"}</td>
-                    <td className="acciones">{puedeAnular && l.tipo !== "ANULACION" && l.anuladoPor === null && <button className="secundario" onClick={() => setAnulando({ id: l.movimientoId, secuencia: l.secuencia })}>Anular</button>}</td>
+                    <td>P-{String(l.pieza).padStart(6, "0")}</td><td>{l.ubicacion}</td><td>{NOMBRE_ESTADO[l.estado]}</td><td>{l.usuario}</td><td>{l.documento ?? (l.salida !== null ? `S-${l.salida}` : "—")}</td><td>{l.motivo ?? "—"}</td>
+                    <td className="acciones">{puedeAnular && (l.tipo === "ENTRADA" || l.tipo === "MOVIMIENTO_INTERNO") && l.anuladoPor === null && <button className="secundario" onClick={() => setAnulando({ id: l.movimientoId, secuencia: l.secuencia })}>Anular</button>}</td>
                   </tr>
                 ))}
               </tbody>

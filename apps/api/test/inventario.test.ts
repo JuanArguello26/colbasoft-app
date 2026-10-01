@@ -314,8 +314,8 @@ describe("HU-KDX-002 · ningún movimiento se borra ni se edita", () => {
     const d = await entrada(e.skus[0]!, 2);
     const mov = await prisma.movimiento.findFirstOrThrow({ where: { documentoEntradaId: d.id } });
     const base = { usuarioId: mov.usuarioId, usuarioLogin: "x", iniciadoEn: new Date() };
-    await expect(prisma.movimiento.create({ data: { ...base, tipo: "ANULACION" } })).rejects.toThrow(/anulacion_coherente/);
-    await expect(prisma.movimiento.create({ data: { ...base, tipo: "ENTRADA", anulaAId: mov.id } })).rejects.toThrow(/anulacion_coherente/);
+    await expect(prisma.movimiento.create({ data: { ...base, tipo: "ANULACION" } })).rejects.toThrow(/origen_coherente/);
+    await expect(prisma.movimiento.create({ data: { ...base, tipo: "ENTRADA", anulaAId: mov.id } })).rejects.toThrow(/origen_coherente/);
   });
 });
 

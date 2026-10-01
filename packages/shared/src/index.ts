@@ -162,7 +162,7 @@ export interface EtiquetaVista {
   ubicacion?: { bodega: string; zona: string; codigo: string };
 }
 
-export type EstadoExistencia = "EN_RECEPCION" | "DISPONIBLE";
+export type EstadoExistencia = "EN_RECEPCION" | "DISPONIBLE" | "RESERVADO";
 
 export interface ExistenciaEnUbicacion {
   ubicacionId: string;
@@ -308,7 +308,7 @@ export interface UbicacionDeReferencia {
   disponible: boolean;
 }
 
-export type TipoMovimientoVista = "ENTRADA" | "MOVIMIENTO_INTERNO" | "ANULACION";
+export type TipoMovimientoVista = "ENTRADA" | "MOVIMIENTO_INTERNO" | "ANULACION" | "RESERVA" | "SALIDA" | "LIBERACION";
 
 /** Una línea del kardex: responde qué, cuánto, dónde, quién, cuándo y por qué (CD-21). */
 export interface LineaKardex {
@@ -328,6 +328,8 @@ export interface LineaKardex {
   usuario: string;
   /** Número del documento de entrada que originó el movimiento, si lo hubo. */
   documento: number | null;
+  /** Número de la salida que originó la reserva, la salida o la liberación, si la hubo. */
+  salida: number | null;
   /** Motivo tipificado: solo las anulaciones lo llevan en C1. */
   motivo: string | null;
   /** Secuencia del movimiento que esta anulación neutraliza. */
@@ -386,4 +388,78 @@ export interface MovimientoInternoResultado {
   origen: string;
   destino: string;
   modo: ModoIdentificacion;
+}
+
+// ---- Salidas y corte parcial (bloque C1-6) ----
+
+export const ESTADOS_SALIDA = ["SOLICITADA", "AUTORIZADA", "CONFIRMADA", "CANCELADA", "VENCIDA"] as const;
+export type EstadoSalida = (typeof ESTADOS_SALIDA)[number];
+
+export interface LineaSalidaVista {
+  id: string;
+  sku: SkuVista;
+  lote: { id: string; codigo: string } | null;
+  /** Lo que sale; en una salida parcial es lo disponible. */
+  cantidad: number;
+  cantidadPedida: number;
+  /** Lo tomado hasta ahora al preparar. */
+  tomada: number;
+  piezasTomadas: number;
+  piezasReservadas: number;
+}
+
+/** Una pieza (o parte de ella) reservada para una línea: qué tomar y de dónde (RN-SAL-003). */
+export interface ReservaVista {
+  id: string;
+  lineaId: string;
+  piezaId: string;
+  pieza: number;
+  tipo: TipoPieza;
+  lote: string;
+  ubicacion: string;
+  /** Lo reservado de la pieza para esta salida. */
+  cantidad: number;
+  /** Lo que tiene la pieza hoy en esa ubicación (todo lo reservado y disponible). */
+  piezaTotal: number;
+  /** Lo tomado al escanear; null mientras no se tome. */
+  tomada: number | null;
+}
+
+export interface SalidaResumen {
+  id: string;
+  numero: number;
+  estado: EstadoSalida;
+  motivo: string;
+  parcial: boolean;
+  solicitadaPor: string;
+  solicitadaEn: string;
+  lineas: number;
+  cantidad: number;
+}
+
+export interface SalidaVista extends SalidaResumen {
+  observacion: string | null;
+  autorizadaPor: string | null;
+  autorizadaEn: string | null;
+  /** Fin del plazo de la reserva (RN-SAL-005). */
+  venceEn: string | null;
+  confirmadaPor: string | null;
+  confirmadaEn: string | null;
+  canceladaPor: string | null;
+  detalle: LineaSalidaVista[];
+  reservas: ReservaVista[];
+  /** Todo lo pedido está tomado: se puede confirmar sin necesidad de salida parcial. */
+  completa: boolean;
+}
+
+export interface TomaResultado {
+  /** La pieza ya se había contado: seleccionarla de nuevo no suma (RN-SAL-009). */
+  yaContada: boolean;
+  pieza: number;
+  cantidad: number;
+  /** Se toma solo una parte de la pieza: corte parcial (RN-SAL-008). */
+  corte: boolean;
+  /** Lo que le quedará a la pieza al confirmar la salida. */
+  restante: number;
+  salida: SalidaVista;
 }
