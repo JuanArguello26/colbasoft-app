@@ -2,7 +2,7 @@
 
 Plataforma de trazabilidad de inventarios para PYMES textiles (proyecto de grado). Este repositorio contiene **el código**; los documentos (SPEC, SRS, dominio, arquitectura) están en el repositorio `colbasoft-docs`.
 
-> **Estado:** corte de entrega **C1** (SPEC v1.5 §12.7). **Bloques C1-1 (Fundación), C1-2 (Identificación y lotes) y C1-3 (Entradas, piezas y ubicación) completos**; sigue C1-4 (kardex y consulta de existencia).
+> **Estado:** corte de entrega **C1** (SPEC v1.5 §12.7). **Bloques C1-1 (Fundación), C1-2 (Identificación y lotes), C1-3 (Entradas, piezas y ubicación) y C1-4 (Kardex y consulta de existencia) completos**; sigue C1-5 (movimientos internos).
 > **Datos:** el proyecto se valida **solo con datos ficticios** (SPEC §12.8). El Excel es **únicamente una carga de datos de prueba**; la base de datos es PostgreSQL.
 
 ## Pila (ADR-001)
@@ -82,6 +82,19 @@ El kardex (`Movimiento` y `AsientoKardex`) es inmutable y la existencia **nunca 
 
 Las pantallas se ven según el rol (SPEC §2.7): el Jefe consulta parámetros y bitácora (sin eventos de configuración), el Coordinador solo su umbral, el Auditor solo la bitácora.
 
+## Estado del bloque C1-4 (Kardex y consulta de existencia)
+
+| Historia | Qué hay |
+|---|---|
+| HU-INV-001 | Existencia por referencia (texto, lote o ubicación), desglosada por talla, color y lote, con los cinco estados (reservado, inmovilizado y en tránsito valen 0 hasta C1-6 y siguientes); la cifra se suma siempre de los asientos del kardex |
+| HU-INV-002 | El escaneo (ya hecho en C1-2) devuelve referencia, talla, color, lote, ubicación y existencia; sin costos; no modifica nada (verificado por prueba) |
+| HU-INV-003 | «Dónde está»: todas las ubicaciones con existencia de la referencia, orden por cantidad o zona, filtro por talla, color y lote, y marca de lo no disponible |
+| HU-KDX-001 | Kardex de una pieza, un lote o una unidad (SKU + lote + ubicación) en orden cronológico, con fecha, tipo, cantidad, existencia resultante, ubicación, usuario, documento y motivo; verificación de continuidad; exportable a CSV (queda en la bitácora) |
+| HU-KDX-002 | Sin ruta ni función para editar o borrar un movimiento (la base también lo rechaza); un error se neutraliza con una **anulación** (movimiento inverso con motivo tipificado, solo Administrador y Jefe); ambos quedan visibles y en la bitácora |
+| HU-KDX-006 | Piezas de un lote con tipo, cantidad actual, ubicación y estado; kardex por pieza sin necesidad de un QR propio |
+
+Una migración (`c1_4_kardex_anulacion`) añade el tipo `ANULACION` y las columnas `anulaAId` (único: un movimiento se anula una sola vez) y `motivoId`, con un CHECK que obliga a toda anulación a decir qué neutraliza y con qué motivo.
+
 ## Provisional o pendiente
 
 - **Parámetros y rangos:** son valores **de demostración**; el SPEC no fija cifras (se calibran con datos reales).
@@ -100,6 +113,14 @@ Las pantallas se ven según el rol (SPEC §2.7): el Jefe consulta parámetros y 
   - **Una pieza no se edita ni se elimina** (RN-LOT-007, RN-MAE-007): si se digita mal una cantidad antes de confirmar no hay corrección en el sistema. El estado «Reversado» del documento (HD-19) no tiene requisito y no se implementó. Es el hueco más molesto de la recepción: conviene decidirlo.
   - **El lote se asigna al confirmar:** las piezas pertenecen a una línea (un SKU) y por ella a un solo lote.
   - Una línea por SKU en cada documento.
+- **Decisiones de interpretación del bloque C1-4** (revisar con el Director):
+  - **Anulación (RF-KDX-004):** la «autorización» se entendió como el rol (matriz: Administrador y Jefe); no hay una segunda persona que apruebe, porque el SRS no la pide. Una anulación no se anula, y un movimiento ya movido no se anula hasta anular lo posterior (la base rechaza dejar la existencia negativa).
+  - **Anular una entrada no cambia el estado del documento de entrada** (sigue «confirmado»); el kardex refleja la anulación. Queda abierto qué debe mostrar el documento.
+  - **Motivo en el kardex:** solo las anulaciones llevan motivo; entradas y movimientos internos muestran tipo y documento, porque el SRS no define motivo para ellos.
+  - **«Sin huecos» (HU-KDX-001 criterio 4):** se verifica que cada línea sea la anterior más su cantidad y que la existencia no baje de cero. La numeración de movimientos puede saltar (secuencias consumidas por transacciones deshechas) y no se considera hueco.
+  - **Kardex del Auxiliar:** solo lo que él movió y los últimos 30 días (matriz de permisos, «Consultar kardex»); los demás roles ven todo.
+  - **Existencia resultante** es el acumulado dentro de lo consultado (pieza, lote o unidad); dentro de un movimiento, el origen se lista antes que el destino.
+  - La anulación con evidencia (`exigeEvidencia`) no está soportada: los motivos de anulación sembrados no la exigen.
 - **Lectura con cámara:** usa `getUserMedia` y `jsqr`; exige HTTPS o `localhost`, y no se ha probado con una cámara real (solo la ruta de digitación manual y que el QR generado se decodifique de vuelta).
 - Retención local y sincronización sin conectividad: fuera del corte C1.
 

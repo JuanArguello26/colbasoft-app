@@ -65,10 +65,12 @@ enum TipoPieza {
   BOLSA
 }
 
-/// Tipos de movimiento del corte C1. Ajuste, salida y anulación llegan con sus bloques.
+/// Tipos de movimiento del corte C1. Ajuste y salida llegan con sus bloques.
 enum TipoMovimiento {
   ENTRADA
   MOVIMIENTO_INTERNO
+  /// Movimiento inverso que neutraliza otro (CD-34, RF-KDX-004); no borra el original.
+  ANULACION
 }
 
 /// SM-06 (porción de existencia). Reservado, en tránsito e inmovilizado llegan con sus bloques.
@@ -121,6 +123,7 @@ model Motivo {
   nombre         String
   exigeEvidencia Boolean       @default(false)
   activo         Boolean       @default(true)
+  movimientos    Movimiento[]
 
   @@unique([tipoOperacion, nombre])
 }
@@ -349,6 +352,12 @@ model Movimiento {
   /// RN-MOV-003 / RF-BOD-009: ubicación propuesta por el sistema y si el Auxiliar ubicó en otra.
   propuestaUbicacionId String?
   desviacion           Boolean             @default(false)
+  /// Solo en una ANULACION: el movimiento que neutraliza (uno solo puede anularse una vez) y el motivo tipificado (RF-KDX-004).
+  anulaAId             String?             @unique
+  anulaA               Movimiento?         @relation("Anulacion", fields: [anulaAId], references: [id])
+  anuladoPor           Movimiento?         @relation("Anulacion")
+  motivoId             String?
+  motivo               Motivo?             @relation(fields: [motivoId], references: [id])
   asientos             AsientoKardex[]
 
   @@index([documentoEntradaId])

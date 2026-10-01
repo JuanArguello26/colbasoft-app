@@ -178,7 +178,7 @@ export type ResolucionVista =
       identificador: { codigo: string; estado: IdentificadorEstado };
       sku: SkuVista;
       lote: { id: string; codigo: string; origen: string; fechaIngreso: string };
-      /** Ubicaciones donde el SKU + Lote tiene existencia (vacío hasta que existan los movimientos, C1-3). */
+      /** Ubicaciones donde el SKU + Lote tiene existencia, con su estado. */
       ubicaciones: ExistenciaEnUbicacion[];
     }
   | {
@@ -269,4 +269,90 @@ export interface DesviacionVista {
   pieza: number;
   propuesta: string | null;
   elegida: string;
+}
+
+// ---- Kardex y consulta de existencia (bloque C1-4) ----
+
+/** RF-INV-002: el desglose siempre muestra los cinco estados; los que aún no existen en el corte C1 valen 0. */
+export const ESTADOS_DESGLOSE = ["DISPONIBLE", "RESERVADO", "INMOVILIZADO", "EN_TRANSITO", "EN_RECEPCION"] as const;
+export type EstadoDesglose = (typeof ESTADOS_DESGLOSE)[number];
+export type DesgloseEstados = Record<EstadoDesglose, number>;
+
+export interface ExistenciaDetalle {
+  sku: SkuVista;
+  lote: { id: string; codigo: string };
+  porEstado: DesgloseEstados;
+  total: number;
+}
+
+export interface ExistenciaReferencia {
+  referenciaId: string;
+  codigo: string;
+  descripcion: string;
+  unidadMedida: UnidadMedida;
+  porEstado: DesgloseEstados;
+  total: number;
+  /** Por talla, color y lote (HU-INV-001 criterio 1). Vacío si no hay existencia. */
+  detalle: ExistenciaDetalle[];
+}
+
+/** HU-INV-003: una fila por ubicación, SKU, lote y estado; la que no está disponible va marcada. */
+export interface UbicacionDeReferencia {
+  ubicacionId: string;
+  ubicacion: string;
+  zona: string;
+  sku: SkuVista;
+  lote: { id: string; codigo: string };
+  estado: EstadoDesglose;
+  cantidad: number;
+  disponible: boolean;
+}
+
+export type TipoMovimientoVista = "ENTRADA" | "MOVIMIENTO_INTERNO" | "ANULACION";
+
+/** Una línea del kardex: responde qué, cuánto, dónde, quién, cuándo y por qué (CD-21). */
+export interface LineaKardex {
+  movimientoId: string;
+  secuencia: number;
+  instante: string;
+  tipo: TipoMovimientoVista;
+  /** Con signo: lo que el asiento suma o resta. */
+  cantidad: number;
+  /** Suma acumulada de las cantidades dentro de lo consultado, hasta esta línea. */
+  existenciaResultante: number;
+  estado: EstadoDesglose;
+  ubicacion: string;
+  pieza: number;
+  sku: SkuVista;
+  lote: string;
+  usuario: string;
+  /** Número del documento de entrada que originó el movimiento, si lo hubo. */
+  documento: number | null;
+  /** Motivo tipificado: solo las anulaciones lo llevan en C1. */
+  motivo: string | null;
+  /** Secuencia del movimiento que esta anulación neutraliza. */
+  anulaA: number | null;
+  /** Secuencia de la anulación que neutralizó este movimiento. */
+  anuladoPor: number | null;
+}
+
+export interface KardexVista {
+  lineas: LineaKardex[];
+  /** Existencia al final de lo consultado. */
+  existenciaFinal: number;
+  /** HU-KDX-001 criterio 4: cada línea es la anterior más su cantidad y la existencia nunca queda por debajo de cero. */
+  continuidad: { ok: boolean; lineas: number };
+  truncado: boolean;
+  /** El Auxiliar solo ve lo que él movió y los últimos 30 días. */
+  restringido: boolean;
+}
+
+export interface PiezaDeLoteVista extends PiezaVista {
+  /** Lo que queda de la pieza hoy: la suma de sus asientos en el kardex. */
+  cantidadActual: number;
+}
+
+export interface PiezasDeLoteVista {
+  lote: { id: string; codigo: string; sku: SkuVista };
+  piezas: PiezaDeLoteVista[];
 }

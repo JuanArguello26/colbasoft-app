@@ -90,3 +90,7 @@ td.acciones button, .lista .acciones button { min-height: 36px; padding: .35rem 
   .hoja-etiquetas { position: absolute; inset: 0 auto auto 0; width: 100%; margin: 0; }
   .etiqueta { border: 1px solid #000; }
 }
+
+/* C1-4: existencia y kardex */
+td.suave { color: var(--suave); }
+tr.fila-activa td { background: color-mix(in srgb, var(--acento) 12%, transparent); }

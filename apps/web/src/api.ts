@@ -1,5 +1,5 @@
 import type {
-  BodegaVista, DesviacionVista, DocumentoEntradaResumen, DocumentoEntradaVista, EstadoExistencia, EtiquetaVista, PropuestaUbicacion, TipoPieza, IdentificadorResumen, LoteVista, ModoIdentificacion, ResolucionVista, SkuVista, MotivoVista, ParametroVista, ReferenciaDetalle, ReferenciaResumen, RegistroBitacoraVista,
+  BodegaVista, DesviacionVista, ExistenciaReferencia, KardexVista, PiezasDeLoteVista, UbicacionDeReferencia, DocumentoEntradaResumen, DocumentoEntradaVista, EstadoExistencia, EtiquetaVista, PropuestaUbicacion, TipoPieza, IdentificadorResumen, LoteVista, ModoIdentificacion, ResolucionVista, SkuVista, MotivoVista, ParametroVista, ReferenciaDetalle, ReferenciaResumen, RegistroBitacoraVista,
   Rol, SesionInfo, TipoOperacion, UnidadMedida, UsuarioAdmin, UsuarioSesion, ZonaTipo,
 } from "@colbasoft/shared";
 
@@ -84,6 +84,13 @@ export const api = {
   ubicarPieza: (piezaId: string, d: { destinoCodigo?: string; destinoId?: string; mercanciaCodigo?: string }) => pedir<{ movimientoId: string; desviacion: boolean; destino: string; estado: EstadoExistencia; modo: ModoIdentificacion }>(`/api/entradas/piezas/${piezaId}/ubicar`, cuerpo(d)),
   desviaciones: () => pedir<DesviacionVista[]>("/api/entradas/desviaciones"),
   zonaCategoria: (zonaId: string, categoriaId: string | null) => pedir<{ ok: boolean }>(`/api/bodega/zonas/${zonaId}/categoria`, enviar("PATCH", { categoriaId })),
+  // existencia y kardex (C1-4)
+  existencia: (q: Record<string, string>) => pedir<ExistenciaReferencia[]>(`/api/inventario/existencia?${new URLSearchParams(q)}`, undefined, true),
+  dondeEsta: (q: Record<string, string>) => pedir<UbicacionDeReferencia[]>(`/api/inventario/donde-esta?${new URLSearchParams(q)}`, undefined, true),
+  piezasDeLote: (loteId: string) => pedir<PiezasDeLoteVista>(`/api/inventario/lotes/${loteId}/piezas`, undefined, true),
+  kardex: (q: Record<string, string>) => pedir<KardexVista>(`/api/inventario/kardex?${new URLSearchParams(q)}`, undefined, true),
+  urlKardexCsv: (q: Record<string, string>) => `/api/inventario/kardex?${new URLSearchParams({ ...q, formato: "csv" })}`,
+  anularMovimiento: (movimientoId: string, motivoId: string) => pedir<{ anulado: number; inverso: number }>(`/api/inventario/movimientos/${movimientoId}/anular`, cuerpo({ motivoId })),
   // parámetros y motivos
   parametros: () => pedir<ParametroVista[]>("/api/parametros"),
   guardarParametro: (clave: string, valor: number) => pedir<{ clave: string; anterior: number; nuevo: number }>(`/api/parametros/${clave}`, enviar("PUT", { valor })),

@@ -7,17 +7,21 @@ import { Bodega } from "./vistas/Bodega";
 import { Catalogo } from "./vistas/Catalogo";
 import { Entradas } from "./vistas/Entradas";
 import { Escanear } from "./vistas/Escanear";
+import { Existencia } from "./vistas/Existencia";
+import { Kardex } from "./vistas/Kardex";
 import { Identificacion } from "./vistas/Identificacion";
 import { Motivos } from "./vistas/Motivos";
 import { Parametros } from "./vistas/Parametros";
 import { Usuarios } from "./vistas/Usuarios";
 
-type Vista = "catalogo" | "entradas" | "identificacion" | "escanear" | "bodega" | "motivos" | "usuarios" | "parametros" | "bitacora";
+type Vista = "catalogo" | "entradas" | "existencia" | "kardex" | "identificacion" | "escanear" | "bodega" | "motivos" | "usuarios" | "parametros" | "bitacora";
 
 interface Pestana { id: Vista; titulo: string; roles: Rol[] | "todos" }
 const PESTANAS: Pestana[] = [
   { id: "catalogo", titulo: "Catálogo", roles: "todos" },
   { id: "entradas", titulo: "Entradas", roles: "todos" },
+  { id: "existencia", titulo: "Existencia", roles: "todos" },
+  { id: "kardex", titulo: "Kardex", roles: "todos" },
   { id: "identificacion", titulo: "Lotes y QR", roles: "todos" },
   { id: "escanear", titulo: "Escanear", roles: ["ADMINISTRADOR", "JEFE_BODEGA", "COORDINADOR_BODEGA", "AUXILIAR_BODEGA"] },
   { id: "bodega", titulo: "Bodega", roles: "todos" },
@@ -110,6 +114,7 @@ function Shell({ sesion, refrescar, alSalir }: { sesion: SesionInfo; refrescar: 
   const visibles = PESTANAS.filter((p) => p.roles === "todos" || p.roles.includes(sesion.rol));
   const [vista, setVista] = useState<Vista>("catalogo");
   const rol = sesion.rol;
+  const [loteKardex, setLoteKardex] = useState<string | null>(null);
 
   // Sesión por inactividad (HU-ACC-002): aviso previo, renovación y cierre.
   const [restante, setRestante] = useState(Infinity);
@@ -157,6 +162,8 @@ function Shell({ sesion, refrescar, alSalir }: { sesion: SesionInfo; refrescar: 
             verDesviaciones: rol === "ADMINISTRADOR" || rol === "JEFE_BODEGA" || rol === "COORDINADOR_BODEGA",
           }} />
         )}
+        {vista === "existencia" && <Existencia alVerKardex={(id) => { setLoteKardex(id); setVista("kardex"); }} />}
+        {vista === "kardex" && <Kardex loteInicial={loteKardex} puedeAnular={rol === "ADMINISTRADOR" || rol === "JEFE_BODEGA"} esAuxiliar={rol === "AUXILIAR_BODEGA"} />}
         {vista === "identificacion" && <Identificacion puedeGenerar={rol === "ADMINISTRADOR" || rol === "JEFE_BODEGA" || rol === "COORDINADOR_BODEGA"} />}
         {vista === "escanear" && <Escanear />}
         {vista === "bodega" && <Bodega puedeEditar={rol === "ADMINISTRADOR"} />}
